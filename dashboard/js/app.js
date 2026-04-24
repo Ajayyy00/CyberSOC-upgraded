@@ -21,11 +21,11 @@ class CyberSOCDashboard {
     this.prevAlertIds = new Set();
     this.currentAction = null;
 
-    // Live score estimates (updated heuristically during episode)
+    // Live score estimates — all start at 0 (nothing scored until an episode runs)
     this.liveScores = {
       threat_containment: 0, ioc_blocking: 0, forensic_investigation: 0,
       siem_correlation: 0, threat_intel_usage: 0, vuln_root_cause: 0,
-      business_impact: 1.0, step_efficiency: 0.5, plan_coverage: 0, plan_evidence_quality: 0,
+      business_impact: 0, step_efficiency: 0, plan_coverage: 0, plan_evidence_quality: 0,
     };
     this.containmentState = {
       processed_killed: 0, processes_total: 0,
@@ -59,7 +59,7 @@ class CyberSOCDashboard {
         this._showConnectionOverlay(`Connecting to CyberSOC Server... (${attempts}/${maxAttempts})`);
         setTimeout(check, 2000);
       } else {
-        this._showConnectionOverlay('⚠️ Server not available. Start with: uvicorn server.app:app --port 8000');
+        this._showConnectionOverlay('⚠️ Server not available. Start with: uvicorn dashboard_server:app --port 8000');
         document.getElementById('btn-start').disabled = false; // Allow manual start attempt
       }
     };
@@ -1024,12 +1024,12 @@ class CyberSOCDashboard {
     document.querySelectorAll('.phase-dot').forEach(d => d.classList.remove('active', 'completed'));
     document.querySelectorAll('.phase-connector').forEach(c => c.classList.remove('completed'));
 
-    // Reset charts
+    // Reset charts — all zeros, no data until episode starts
     if (this.rewardTimeline) this.rewardTimeline.reset();
     if (this.radarChart) this.radarChart.update({
       threat_containment: 0, ioc_blocking: 0, forensic_investigation: 0,
       siem_correlation: 0, threat_intel_usage: 0, vuln_root_cause: 0,
-      business_impact: 1.0, step_efficiency: 0.5, plan_coverage: 0, plan_evidence_quality: 0,
+      business_impact: 0, step_efficiency: 0, plan_coverage: 0, plan_evidence_quality: 0,
     });
 
     // Reset threat graph
@@ -1050,10 +1050,11 @@ class CyberSOCDashboard {
     document.getElementById('network-topology').innerHTML = '';
     document.getElementById('network-topology').dataset.built = 'false';
     if (this.rewardTimeline) this.rewardTimeline.reset();
+    // Reset live scores to zero — scores only update via real step() responses
     this.liveScores = {
       threat_containment: 0, ioc_blocking: 0, forensic_investigation: 0,
       siem_correlation: 0, threat_intel_usage: 0, vuln_root_cause: 0,
-      business_impact: 1.0, step_efficiency: 0.5, plan_coverage: 0, plan_evidence_quality: 0,
+      business_impact: 0, step_efficiency: 0, plan_coverage: 0, plan_evidence_quality: 0,
     };
     if (this.radarChart) this.radarChart.update(this.liveScores);
   }

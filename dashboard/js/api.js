@@ -9,9 +9,17 @@ const API = {
   baseUrl: (() => {
     if (typeof window === 'undefined') return 'http://localhost:8000';
     const { protocol, hostname, port } = window.location;
+    // Opened as a local file
     if (protocol === 'file:') return 'http://localhost:8000';
+    // Served by dashboard_server.py on port 8000 (same origin)
     if (hostname === 'localhost' && (port === '8000' || !port)) return '';
-    return 'http://localhost:8000';
+    // HuggingFace Spaces (*.hf.space) — dashboard_server.py serves both
+    // the static dashboard AND the FastAPI app at the same origin
+    if (hostname.endsWith('.hf.space')) return '';
+    // Local dev server on any other port (e.g. 8080) — API is still at 8000
+    if (hostname === 'localhost') return 'http://localhost:8000';
+    // Any other deployment — assume same origin
+    return '';
   })(),
   sessionId: null,
 
@@ -105,19 +113,22 @@ const API = {
   },
 
   async checkConnection() {
+    // Use /health endpoint — never /state — to avoid fetching and
+    // accidentally rendering stale episode data from a previous session.
     try {
-      // Try /state first, fall back to root
-      const r = await fetch(`${this.baseUrl}/state`, {
+      const r = await fetch(`${this.baseUrl}/health`, {
         signal: AbortSignal.timeout(3000),
       });
-      return r.ok || r.status === 404; // 404 = server alive, no state yet
+      if (r.ok) return true;
+    } catch { /* fall through */ }
+    // Fallback: ping root
+    try {
+      const r2 = await fetch(`${this.baseUrl}/`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      return r2.ok;
     } catch {
-      try {
-        const r2 = await fetch(this.baseUrl, { signal: AbortSignal.timeout(3000) });
-        return true;
-      } catch {
-        return false;
-      }
+      return false;
     }
   },
 };

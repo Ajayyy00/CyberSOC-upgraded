@@ -58,6 +58,17 @@ app.add_middleware(
 )
 
 
+from fastapi.responses import JSONResponse
+
+@app.get("/health")
+async def health():
+    """Lightweight liveness probe used by the dashboard to check server reachability.
+    Returns only status — never returns episode state, so the dashboard
+    cannot accidentally render stale data from a previous session.
+    """
+    return JSONResponse({"status": "ok", "service": "cybersocenv"})
+
+
 def main(host: str = "0.0.0.0", port: int = 8000):
     """Entry point for direct execution.
 
