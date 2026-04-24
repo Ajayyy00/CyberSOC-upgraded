@@ -158,6 +158,7 @@ class CyberSOCEnvironment(Environment):
         self._last_forensics: Optional[ForensicsResult] = None
         self._middleware = ActionMiddleware()
         self._rng = random.Random(0)  # overwritten in reset()
+        self._pending_followup: Dict[str, bool] = {}  # hostname -> responded_to
 
     def _reset_rubric(self):
         """Initialize live containment requirements for dynamic grading in adaptive mode."""
@@ -246,6 +247,7 @@ class CyberSOCEnvironment(Environment):
         self._reset_rubric()
         self._fired_step_rewards: set = set()
         self._step_reward_total: float = 0.0
+        self._pending_followup: Dict[str, bool] = {}
 
         # Initialize threat graph from task definition
         self._threat_graph = ThreatGraph()
@@ -516,6 +518,8 @@ class CyberSOCEnvironment(Environment):
             self._host_index[target_host]["status"] = "isolated"
             if self._threat_graph is not None and target_host in self._threat_graph.hosts:
                 self._threat_graph.hosts[target_host].status = "isolated"
+            if target_host in self._pending_followup:
+                self._pending_followup[target_host] = True
             return 0.10, f"Isolated single host '{target_host}'"
 
         subnet = action.subnet
@@ -531,6 +535,8 @@ class CyberSOCEnvironment(Environment):
             host["status"] = "isolated"
             if self._threat_graph is not None and host["hostname"] in self._threat_graph.hosts:
                 self._threat_graph.hosts[host["hostname"]].status = "isolated"
+            if host["hostname"] in self._pending_followup:
+                self._pending_followup[host["hostname"]] = True
 
         self._state.isolated_subnets.append(subnet)
 
@@ -570,6 +576,22 @@ class CyberSOCEnvironment(Environment):
             return -0.02, f"IOC '{ioc}' is already blocked"
 
         self._state.blocked_iocs.append(ioc)
+
+        # Mark any forensics-confirmed host as responded-to if this IOC belongs to its threat chain
+        for hostname, responded in list(self._pending_followup.items()):
+            if responded:
+                continue
+            for threat in self._task_def["attack_chain"]:
+                if hostname in threat["compromised_hosts"]:
+                    all_threat_iocs = (
+                        threat["iocs"].get("hashes", [])
+                        + threat["iocs"].get("ips", [])
+                        + threat["iocs"].get("domains", [])
+                        + threat.get("c2_servers", [])
+                    )
+                    if ioc in all_threat_iocs:
+                        self._pending_followup[hostname] = True
+                        break
 
         # Check if this IOC is relevant to any active threat
         reward = 0.0
@@ -641,6 +663,7 @@ class CyberSOCEnvironment(Environment):
         if hostname not in self._state.forensics_run:
             if is_compromised:
                 reward = 0.10  # Good: found evidence
+                self._pending_followup.setdefault(hostname, False)  # needs response action
             else:
                 reward = 0.02  # Cleared a host (some value)
             self._state.forensics_run.append(hostname)
@@ -689,6 +712,8 @@ class CyberSOCEnvironment(Environment):
         # Kill the process
         host["running_processes"].remove(process)
         self._state.killed_processes.append({"hostname": hostname, "process": process})
+        if hostname in self._pending_followup:
+            self._pending_followup[hostname] = True
 
         # Check if this was a malicious process
         reward = 0.0
@@ -913,9 +938,9 @@ class CyberSOCEnvironment(Environment):
     def _compute_reward_dimensions(self) -> Dict[str, float]:
         """Per-step heuristic partial scores for all 10 grading dimensions.
 
-        Updated every step so GRPO can assign credit without waiting for the
-        terminal grade.  Scores are in [0, 1]; the terminal grade_breakdown
-        (from grade_episode) supersedes these once the plan is submitted.
+        Evidence-gated: actions only score if prior evidence justified them.
+        Result-usage: forensics-confirmed hosts with no followup are penalized.
+        Scores in [0, 1]; terminal grade_breakdown supersedes these on plan submission.
         """
         state = self._state
         task_chain = self._task_def.get("attack_chain", [])
@@ -929,26 +954,104 @@ class CyberSOCEnvironment(Environment):
             for t in task_chain
         ))
 
-        # 1. threat_containment — fraction of threats neutralised
+        # --- Build evidence pools: what the agent could have observed ---
+        # Hosts mentioned as alert source (visible from turn 0)
+        alert_source_hosts: set = set()
+        for a in self._task_def.get("initial_alerts", []):
+            alert_source_hosts.add(a.get("source_host", ""))
+        for a in self._alert_queue:
+            alert_source_hosts.add(a.get("source_host", ""))
+        alert_source_hosts.discard("")
+
+        # IOCs visible from alert ioc_indicators
+        alert_iocs: set = set()
+        for a_list in (self._task_def.get("initial_alerts", []), self._alert_queue):
+            for a in a_list:
+                for ioc in a.get("ioc_indicators", []):
+                    alert_iocs.add(ioc)
+
+        # IOCs revealed by running forensics on a host
+        forensics_revealed_iocs: set = set()
+        for hostname in state.forensics_run:
+            for threat in task_chain:
+                if hostname in threat.get("compromised_hosts", []):
+                    forensics_revealed_iocs.update(threat.get("c2_servers", []))
+                    forensics_revealed_iocs.update(threat["iocs"].get("hashes", []))
+                    forensics_revealed_iocs.update(threat["iocs"].get("ips", []))
+                    forensics_revealed_iocs.update(threat["iocs"].get("domains", []))
+
+        discovered_iocs = alert_iocs | forensics_revealed_iocs
+
+        # 1. threat_containment — fraction of threats neutralised (no evidence gate; outcome IS evidence)
         threat_containment = min(1.0, len(state.contained_threats) / total_threats)
 
-        # 2. ioc_blocking — fraction of known IOCs blocked
-        ioc_blocking = min(1.0, len(state.blocked_iocs) / total_iocs)
+        # 2. ioc_blocking — only blocks of IOCs the agent actually discovered count
+        justified_blocks = [ioc for ioc in state.blocked_iocs if ioc in discovered_iocs]
+        ioc_blocking = min(1.0, len(justified_blocks) / total_iocs)
 
-        # 3. forensic_investigation — fraction of compromised hosts investigated
-        forensic_investigation = min(1.0, len(state.forensics_run) / total_compromised)
+        # 3. forensic_investigation — only counts forensics on alert-mentioned or previously queried
+        #    hosts; penalizes confirmed compromises left with no response action
+        justified_forensics = [
+            h for h in state.forensics_run
+            if h in alert_source_hosts or h in state.queried_hosts
+        ]
+        pending = self._pending_followup
+        unresponded = sum(1 for v in pending.values() if not v)
+        followup_penalty = min(0.30, unresponded * 0.10)
+        forensic_investigation = max(0.0,
+            min(1.0, len(justified_forensics) / total_compromised) - followup_penalty
+        )
 
-        # 4. siem_correlation — binary: did the agent correlate alerts?
-        siem_correlation = 1.0 if state.correlated_alert_pairs else 0.0
+        # 4. siem_correlation — scored by semantic quality (shared source hosts or IOCs)
+        if not state.correlated_alert_pairs:
+            siem_correlation = 0.0
+        else:
+            alert_map: Dict[str, Any] = {}
+            for a in self._task_def.get("initial_alerts", []):
+                alert_map[a.get("alert_id", "")] = a
+            for a in self._alert_queue:
+                alert_map[a.get("alert_id", "")] = a
+            quality_scores = []
+            for pair in state.correlated_alert_pairs:
+                pair_alerts = [alert_map[aid] for aid in pair if aid in alert_map]
+                if len(pair_alerts) < 2:
+                    quality_scores.append(0.3)
+                    continue
+                sources = [a.get("source_host") for a in pair_alerts]
+                ioc_sets = [set(a.get("ioc_indicators", [])) for a in pair_alerts]
+                shared_hosts = len(sources) != len({s for s in sources if s})
+                shared_iocs = bool(ioc_sets[0] & ioc_sets[1]) if len(ioc_sets) >= 2 else False
+                quality_scores.append(1.0 if (shared_hosts or shared_iocs) else 0.2)
+            siem_correlation = sum(quality_scores) / max(1, len(quality_scores))
 
-        # 5. threat_intel_usage — fraction of IOCs enriched with threat intel
-        threat_intel_usage = min(1.0, len(state.enriched_iocs) / total_iocs)
+        # 5. threat_intel_usage — only enrichments of discovered IOCs count
+        justified_enrichments = [ioc for ioc in state.enriched_iocs if ioc in discovered_iocs]
+        threat_intel_usage = min(1.0, len(justified_enrichments) / total_iocs)
 
         # 6. vuln_root_cause — fraction of threats with a scanned host
         vuln_root_cause = min(1.0, len(state.scanned_hosts) / total_threats)
 
-        # 7. business_impact — lower impact is better
-        business_impact = max(0.0, 1.0 - state.business_impact)
+        # 7. business_impact — proportionate isolation + low overall impact
+        #    Reward: isolating confirmed-compromised hosts  Penalize: isolating clean hosts
+        isolated_host_set = {
+            h for h, hd in self._host_index.items() if hd.get("status") == "isolated"
+        } if self._host_index else set()
+        compromised_host_set = {
+            h for threat in task_chain for h in threat.get("compromised_hosts", [])
+        }
+        if isolated_host_set:
+            over_isolated = isolated_host_set - compromised_host_set
+            isolation_proportion = (
+                len(isolated_host_set - over_isolated) / len(isolated_host_set)
+            )
+            over_iso_penalty = min(0.40, len(over_isolated) * 0.15)
+        else:
+            isolation_proportion = 1.0
+            over_iso_penalty = 0.0
+        raw_impact_score = max(0.0, 1.0 - state.business_impact)
+        business_impact = max(0.0, min(1.0,
+            0.6 * raw_impact_score + 0.4 * isolation_proportion - over_iso_penalty
+        ))
 
         # 8. step_efficiency — reward early resolution
         ratio = state.step_count / max(1, state.max_steps)
@@ -960,25 +1063,25 @@ class CyberSOCEnvironment(Environment):
         else:
             plan_coverage = min(0.5, len(state.contained_threats) / total_threats * 0.5)
 
-        # 10. plan_evidence_quality — confidence of submitted plan; else proxy from investigation depth
+        # 10. plan_evidence_quality — confidence of submitted plan; else evidence depth proxy
         if state.submitted_plan and self._plan_entries:
             avg_conf = sum(e.get("confidence", 0.0) for e in self._plan_entries) / len(self._plan_entries)
             plan_evidence_quality = float(avg_conf)
         else:
-            evidence_count = len(state.forensics_run) + len(state.enriched_iocs) + len(state.scanned_hosts)
+            evidence_count = len(justified_forensics) + len(justified_enrichments) + len(state.scanned_hosts)
             plan_evidence_quality = min(0.5, evidence_count / (total_compromised * 3) * 0.5)
 
         return {
-            "threat_containment":    round(threat_containment,    4),
-            "ioc_blocking":          round(ioc_blocking,          4),
-            "forensic_investigation":round(forensic_investigation, 4),
-            "siem_correlation":      round(siem_correlation,      4),
-            "threat_intel_usage":    round(threat_intel_usage,    4),
-            "vuln_root_cause":       round(vuln_root_cause,       4),
-            "business_impact":       round(business_impact,       4),
-            "step_efficiency":       round(step_efficiency,       4),
-            "plan_coverage":         round(plan_coverage,         4),
-            "plan_evidence_quality": round(plan_evidence_quality, 4),
+            "threat_containment":     round(threat_containment,     4),
+            "ioc_blocking":           round(ioc_blocking,           4),
+            "forensic_investigation": round(forensic_investigation, 4),
+            "siem_correlation":       round(siem_correlation,       4),
+            "threat_intel_usage":     round(threat_intel_usage,     4),
+            "vuln_root_cause":        round(vuln_root_cause,        4),
+            "business_impact":        round(business_impact,        4),
+            "step_efficiency":        round(step_efficiency,        4),
+            "plan_coverage":          round(plan_coverage,          4),
+            "plan_evidence_quality":  round(plan_evidence_quality,  4),
         }
 
     def _get_current_phase(self) -> str:
