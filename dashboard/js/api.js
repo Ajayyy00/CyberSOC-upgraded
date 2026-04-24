@@ -1,11 +1,19 @@
 /* ============================================================
    CyberSOC Dashboard — API Client
-   Talks to the FastAPI CyberSOCEnv server at localhost:8000
+
+   Uses /demo/reset and /demo/step which are STATEFUL endpoints
+   provided by dashboard_server.py.  These keep one live
+   CyberSOCEnvironment instance in memory between calls, unlike
+   OpenEnv's built-in /reset and /step which are stateless
+   (they create a fresh env per request and destroy it afterwards).
    ============================================================ */
 
 const API = {
-  // When served from the dashboard_server.py at /dashboard/ use same-origin relative URLs.
-  // When opened as file:// or from any other origin, fall back to absolute localhost:8000.
+  // Detect the correct base URL for the API server.
+  // dashboard_server.py serves both the static dashboard AND the
+  // /demo/* REST endpoints from the same origin, so we use relative
+  // URLs in production and absolute localhost URLs for local dev
+  // (served by a simple HTTP server on a different port).
   baseUrl: (() => {
     if (typeof window === 'undefined') return 'http://localhost:8000';
     const { protocol, hostname, port } = window.location;
@@ -13,21 +21,19 @@ const API = {
     if (protocol === 'file:') return 'http://localhost:8000';
     // Served by dashboard_server.py on port 8000 (same origin)
     if (hostname === 'localhost' && (port === '8000' || !port)) return '';
-    // HuggingFace Spaces (*.hf.space) — dashboard_server.py serves both
-    // the static dashboard AND the FastAPI app at the same origin
+    // HuggingFace Spaces (*.hf.space) — same origin as dashboard_server
     if (hostname.endsWith('.hf.space')) return '';
-    // Local dev server on any other port (e.g. 8080) — API is still at 8000
+    // Local dev server on any other port (e.g. 8080) — API is at 8000
     if (hostname === 'localhost') return 'http://localhost:8000';
     // Any other deployment — assume same origin
     return '';
   })(),
-  sessionId: null,
 
   // Parse the server response — handles both wrapped {observation: {...}}
   // and flat observation formats
   _parseResponse(data) {
     if (!data) return null;
-    // Prefer wrapped format (per client.py's _parse_result)
+    // Prefer wrapped format
     const obs = data.observation || data;
     return {
       // Core observation fields
@@ -56,8 +62,9 @@ const API = {
     };
   },
 
+  // POST /demo/reset  — starts a new stateful episode on the server
   async reset(taskId = 'hard') {
-    const url = `${this.baseUrl}/reset`;
+    const url = `${this.baseUrl}/demo/reset`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -68,46 +75,30 @@ const API = {
       throw new Error(`Reset failed: ${response.status} — ${errText.substring(0, 200)}`);
     }
     const data = await response.json();
-    // Store session ID if the server provides one
-    const sessionHeader = response.headers.get('X-Session-Id') || response.headers.get('x-session-id');
-    if (sessionHeader) this.sessionId = sessionHeader;
-    if (data.session_id) this.sessionId = data.session_id;
     return this._parseResponse(data);
   },
 
+  // POST /demo/step  — sends action to the SAME env instance created by reset
+  // Body: the action fields directly (task_id, type, hostname, etc.)
+  // dashboard_server's /demo/step expects the action fields at the top level.
   async step(action) {
-    const url = `${this.baseUrl}/step`;
-    const headers = { 'Content-Type': 'application/json' };
-    if (this.sessionId) headers['X-Session-Id'] = this.sessionId;
-
+    const url = `${this.baseUrl}/demo/step`;
     const response = await fetch(url, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(action),
     });
     if (!response.ok) {
-      // Try alternate format: {action: {...}}
-      const altResponse = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ action }),
-      });
-      if (!altResponse.ok) {
-        const errText = await altResponse.text();
-        throw new Error(`Step failed: ${altResponse.status} — ${errText.substring(0, 200)}`);
-      }
-      const data = await altResponse.json();
-      return this._parseResponse(data);
+      const errText = await response.text();
+      throw new Error(`Step failed: ${response.status} — ${errText.substring(0, 200)}`);
     }
     const data = await response.json();
     return this._parseResponse(data);
   },
 
   async getState() {
-    const url = `${this.baseUrl}/state`;
-    const headers = {};
-    if (this.sessionId) headers['X-Session-Id'] = this.sessionId;
-    const response = await fetch(url, { headers });
+    const url = `${this.baseUrl}/demo/state`;
+    const response = await fetch(url);
     if (!response.ok) return null;
     return response.json();
   },
