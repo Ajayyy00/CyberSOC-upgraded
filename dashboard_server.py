@@ -45,7 +45,14 @@ dashboard_dir = os.path.join(ROOT, "dashboard")
 if os.path.isdir(dashboard_dir):
     try:
         from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import RedirectResponse
+        
         app.mount("/dashboard", StaticFiles(directory=dashboard_dir, html=True), name="dashboard")
+        
+        @app.get("/")
+        def root_redirect():
+            return RedirectResponse(url="/dashboard/")
+            
         _STATIC_OK = True
     except ImportError:
         _STATIC_OK = False

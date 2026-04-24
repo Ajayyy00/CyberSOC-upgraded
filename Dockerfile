@@ -16,4 +16,4 @@ COPY --chown=user . /app
 
 # The hackathon expects the OpenEnv Server to run on 7860 for Spaces Gradio endpoints
 # We will use uvicorn to host the app which complies with the spec
-CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "dashboard_server:app", "--host", "0.0.0.0", "--port", "7860"]
