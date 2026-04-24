@@ -1,0 +1,5044 @@
+---
+title: CyberSOCEnv Server
+emoji: 🛡️
+colorFrom: red
+colorTo: purple
+sdk: docker
+pinned: false
+app_port: 8000
+base_path: /web
+tags:
+  - openenv
+---
+# CyberSOCEnv — Enterprise Cybersecurity Operations Center
+# OpenEnv environment manifest
+# 1003 tasks: 3 curated benchmarks + 1000 procedurally generated scenarios
+
+name: cybersocenv
+description: >
+  Enterprise SOC Incident Response environment. Agents respond to
+  simulated SIEM/EDR alerts on a ~75 active node network, containing threats
+  (ransomware, lateral movement, APT/C2, data exfiltration) while
+  minimizing business downtime. 1003 unique deterministic scenarios.
+
+tags:
+  - openenv
+  - cybersecurity
+  - soc
+  - incident-response
+
+tasks:
+  easy:
+    description: "Curated: Single ransomware endpoint on corporate subnet"
+    max_steps: 15
+    difficulty: easy
+
+  medium:
+    description: "Curated: Multi-stage lateral movement — phishing to credential theft to 3 subnets"
+    max_steps: 25
+    difficulty: medium
+
+  hard:
+    description: "Curated: APT with active C2, data exfiltration, and ransomware deployment"
+    max_steps: 30
+    difficulty: hard
+
+  gen_0001:
+    description: "[EASY] Lateral Movement across 3 host(s) in engineering."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0002:
+    description: "[EASY] Ransomware across 1 host(s) in dmz, datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0003:
+    description: "[EASY] Botnet across 2 host(s) in executive, corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0004:
+    description: "[EASY] Privilege Escalation across 1 host(s) in dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0005:
+    description: "[EASY] Credential Theft across 3 host(s) in executive, corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0006:
+    description: "[EASY] Cryptomining across 2 host(s) in dmz, corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0007:
+    description: "[EASY] Credential Theft across 1 host(s) in engineering, executive."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0008:
+    description: "[EASY] Credential Theft across 1 host(s) in finance."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0009:
+    description: "[EASY] Data Exfiltration across 3 host(s) in dmz."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0010:
+    description: "[EASY] Insider Threat across 3 host(s) in corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0011:
+    description: "[EASY] Data Exfiltration across 3 host(s) in finance, engineering."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0012:
+    description: "[EASY] Credential Theft across 1 host(s) in datacenter."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0013:
+    description: "[EASY] Phishing across 1 host(s) in executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0014:
+    description: "[EASY] Phishing across 1 host(s) in finance, corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0015:
+    description: "[EASY] Privilege Escalation across 1 host(s) in executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0016:
+    description: "[EASY] Lateral Movement across 2 host(s) in executive, dmz."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0017:
+    description: "[EASY] Insider Threat across 3 host(s) in engineering."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0018:
+    description: "[EASY] Botnet across 3 host(s) in dmz, datacenter."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0019:
+    description: "[EASY] Privilege Escalation across 2 host(s) in finance, engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0020:
+    description: "[EASY] Credential Theft across 1 host(s) in engineering."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0021:
+    description: "[EASY] Lateral Movement across 2 host(s) in corporate, engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0022:
+    description: "[EASY] Cryptomining across 1 host(s) in executive, datacenter."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0023:
+    description: "[EASY] Lateral Movement across 3 host(s) in datacenter, corporate."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0024:
+    description: "[EASY] Privilege Escalation across 3 host(s) in engineering, corporate."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0025:
+    description: "[EASY] Lateral Movement across 2 host(s) in finance."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0026:
+    description: "[EASY] Phishing across 2 host(s) in executive, engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0027:
+    description: "[EASY] Data Exfiltration across 3 host(s) in corporate."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0028:
+    description: "[EASY] Supply Chain across 2 host(s) in corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0029:
+    description: "[EASY] Insider Threat across 2 host(s) in finance, executive."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0030:
+    description: "[EASY] Lateral Movement across 3 host(s) in datacenter."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0031:
+    description: "[EASY] Cryptomining across 3 host(s) in engineering."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0032:
+    description: "[EASY] Lateral Movement across 1 host(s) in dmz, datacenter."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0033:
+    description: "[EASY] Data Exfiltration across 3 host(s) in engineering, dmz."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0034:
+    description: "[EASY] Insider Threat across 3 host(s) in executive, engineering."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0035:
+    description: "[EASY] Data Exfiltration across 2 host(s) in executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0036:
+    description: "[EASY] Phishing across 2 host(s) in engineering, finance."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0037:
+    description: "[EASY] Ransomware across 1 host(s) in dmz, corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0038:
+    description: "[EASY] Supply Chain across 1 host(s) in engineering."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0039:
+    description: "[EASY] Privilege Escalation across 3 host(s) in corporate, executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0040:
+    description: "[EASY] Ransomware across 1 host(s) in executive, corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0041:
+    description: "[EASY] Webshell across 3 host(s) in dmz, datacenter."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0042:
+    description: "[EASY] Supply Chain across 1 host(s) in dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0043:
+    description: "[EASY] C2 Communication across 1 host(s) in dmz, datacenter."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0044:
+    description: "[EASY] Botnet across 1 host(s) in engineering, executive."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0045:
+    description: "[EASY] Credential Theft across 2 host(s) in dmz, executive."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0046:
+    description: "[EASY] Botnet across 2 host(s) in dmz, finance."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0047:
+    description: "[EASY] Credential Theft across 1 host(s) in corporate, engineering."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0048:
+    description: "[EASY] Insider Threat across 2 host(s) in executive, corporate."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0049:
+    description: "[EASY] Credential Theft across 2 host(s) in engineering."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0050:
+    description: "[EASY] C2 Communication across 3 host(s) in executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0051:
+    description: "[EASY] C2 Communication across 3 host(s) in corporate, executive."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0052:
+    description: "[EASY] Botnet across 1 host(s) in executive, corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0053:
+    description: "[EASY] Data Exfiltration across 2 host(s) in corporate."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0054:
+    description: "[EASY] Credential Theft across 3 host(s) in engineering, corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0055:
+    description: "[EASY] Ransomware across 1 host(s) in corporate, dmz."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0056:
+    description: "[EASY] Credential Theft across 2 host(s) in datacenter, corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0057:
+    description: "[EASY] Supply Chain across 3 host(s) in corporate, executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0058:
+    description: "[EASY] Botnet across 1 host(s) in datacenter."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0059:
+    description: "[EASY] Insider Threat across 1 host(s) in dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0060:
+    description: "[EASY] Privilege Escalation across 1 host(s) in datacenter, engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0061:
+    description: "[EASY] C2 Communication across 2 host(s) in corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0062:
+    description: "[EASY] Supply Chain across 2 host(s) in engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0063:
+    description: "[EASY] Cryptomining across 3 host(s) in executive, corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0064:
+    description: "[EASY] Privilege Escalation across 2 host(s) in finance."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0065:
+    description: "[EASY] Botnet across 2 host(s) in engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0066:
+    description: "[EASY] Cryptomining across 3 host(s) in engineering."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0067:
+    description: "[EASY] C2 Communication across 2 host(s) in dmz."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0068:
+    description: "[EASY] Privilege Escalation across 1 host(s) in engineering, dmz."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0069:
+    description: "[EASY] Phishing across 3 host(s) in engineering, finance."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0070:
+    description: "[EASY] Privilege Escalation across 2 host(s) in finance, datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0071:
+    description: "[EASY] Credential Theft across 2 host(s) in finance."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0072:
+    description: "[EASY] Cryptomining across 2 host(s) in dmz, engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0073:
+    description: "[EASY] Data Exfiltration across 1 host(s) in finance, executive."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0074:
+    description: "[EASY] C2 Communication across 3 host(s) in datacenter."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0075:
+    description: "[EASY] Botnet across 1 host(s) in datacenter."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0076:
+    description: "[EASY] Supply Chain across 2 host(s) in corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0077:
+    description: "[EASY] Webshell across 2 host(s) in finance."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0078:
+    description: "[EASY] Webshell across 1 host(s) in datacenter, engineering."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0079:
+    description: "[EASY] Webshell across 2 host(s) in datacenter, corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0080:
+    description: "[EASY] Phishing across 2 host(s) in datacenter, corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0081:
+    description: "[EASY] Botnet across 2 host(s) in datacenter."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0082:
+    description: "[EASY] Lateral Movement across 3 host(s) in executive."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0083:
+    description: "[EASY] Supply Chain across 2 host(s) in executive, engineering."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0084:
+    description: "[EASY] Phishing across 1 host(s) in dmz."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0085:
+    description: "[EASY] Ransomware across 2 host(s) in finance, dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0086:
+    description: "[EASY] Credential Theft across 3 host(s) in dmz, corporate."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0087:
+    description: "[EASY] Phishing across 1 host(s) in executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0088:
+    description: "[EASY] Botnet across 3 host(s) in executive, engineering."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0089:
+    description: "[EASY] Ransomware across 1 host(s) in engineering."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0090:
+    description: "[EASY] Botnet across 3 host(s) in engineering."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0091:
+    description: "[EASY] Cryptomining across 1 host(s) in engineering, corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0092:
+    description: "[EASY] Privilege Escalation across 2 host(s) in dmz."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0093:
+    description: "[EASY] C2 Communication across 3 host(s) in corporate, dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0094:
+    description: "[EASY] Insider Threat across 1 host(s) in engineering."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0095:
+    description: "[EASY] Ransomware across 2 host(s) in dmz."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0096:
+    description: "[EASY] Cryptomining across 1 host(s) in corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0097:
+    description: "[EASY] Botnet across 1 host(s) in corporate, datacenter."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0098:
+    description: "[EASY] Privilege Escalation across 3 host(s) in corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0099:
+    description: "[EASY] Phishing across 1 host(s) in datacenter, corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0100:
+    description: "[EASY] C2 Communication across 1 host(s) in executive, engineering."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0101:
+    description: "[EASY] C2 Communication across 1 host(s) in dmz."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0102:
+    description: "[EASY] Supply Chain across 3 host(s) in executive."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0103:
+    description: "[EASY] Webshell across 3 host(s) in finance."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0104:
+    description: "[EASY] Botnet across 1 host(s) in dmz, corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0105:
+    description: "[EASY] Data Exfiltration across 3 host(s) in engineering, corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0106:
+    description: "[EASY] Ransomware across 1 host(s) in executive, dmz."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0107:
+    description: "[EASY] Privilege Escalation across 2 host(s) in datacenter."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0108:
+    description: "[EASY] Data Exfiltration across 3 host(s) in engineering."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0109:
+    description: "[EASY] Webshell across 1 host(s) in executive, dmz."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0110:
+    description: "[EASY] Webshell across 3 host(s) in finance."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0111:
+    description: "[EASY] Lateral Movement across 3 host(s) in finance."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0112:
+    description: "[EASY] Phishing across 3 host(s) in executive, corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0113:
+    description: "[EASY] Botnet across 3 host(s) in engineering."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0114:
+    description: "[EASY] Insider Threat across 3 host(s) in executive, dmz."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0115:
+    description: "[EASY] Ransomware across 1 host(s) in executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0116:
+    description: "[EASY] Phishing across 3 host(s) in dmz."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0117:
+    description: "[EASY] Cryptomining across 3 host(s) in executive, corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0118:
+    description: "[EASY] Data Exfiltration across 2 host(s) in corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0119:
+    description: "[EASY] Webshell across 1 host(s) in finance."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0120:
+    description: "[EASY] Phishing across 2 host(s) in executive, dmz."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0121:
+    description: "[EASY] C2 Communication across 2 host(s) in executive, corporate."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0122:
+    description: "[EASY] Phishing across 1 host(s) in dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0123:
+    description: "[EASY] Data Exfiltration across 2 host(s) in engineering, executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0124:
+    description: "[EASY] C2 Communication across 1 host(s) in dmz, finance."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0125:
+    description: "[EASY] C2 Communication across 1 host(s) in dmz, finance."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0126:
+    description: "[EASY] Credential Theft across 1 host(s) in finance, engineering."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0127:
+    description: "[EASY] Botnet across 2 host(s) in engineering, corporate."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0128:
+    description: "[EASY] Webshell across 3 host(s) in executive, datacenter."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0129:
+    description: "[EASY] C2 Communication across 3 host(s) in finance."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0130:
+    description: "[EASY] Data Exfiltration across 3 host(s) in dmz, executive."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0131:
+    description: "[EASY] Webshell across 1 host(s) in datacenter."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0132:
+    description: "[EASY] Botnet across 2 host(s) in corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0133:
+    description: "[EASY] Cryptomining across 1 host(s) in executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0134:
+    description: "[EASY] Phishing across 1 host(s) in datacenter."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0135:
+    description: "[EASY] Botnet across 2 host(s) in executive, datacenter."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0136:
+    description: "[EASY] Data Exfiltration across 2 host(s) in corporate, executive."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0137:
+    description: "[EASY] Botnet across 2 host(s) in dmz, finance."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0138:
+    description: "[EASY] Insider Threat across 3 host(s) in datacenter."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0139:
+    description: "[EASY] Insider Threat across 2 host(s) in dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0140:
+    description: "[EASY] Ransomware across 1 host(s) in datacenter, executive."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0141:
+    description: "[EASY] Credential Theft across 1 host(s) in engineering, executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0142:
+    description: "[EASY] Credential Theft across 3 host(s) in dmz, finance."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0143:
+    description: "[EASY] Webshell across 3 host(s) in executive."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0144:
+    description: "[EASY] Phishing across 1 host(s) in executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0145:
+    description: "[EASY] C2 Communication across 2 host(s) in dmz."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0146:
+    description: "[EASY] Phishing across 3 host(s) in engineering."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0147:
+    description: "[EASY] Insider Threat across 3 host(s) in datacenter."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0148:
+    description: "[EASY] C2 Communication across 3 host(s) in dmz, engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0149:
+    description: "[EASY] Cryptomining across 3 host(s) in datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0150:
+    description: "[EASY] Supply Chain across 1 host(s) in finance."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0151:
+    description: "[EASY] Supply Chain across 2 host(s) in finance, engineering."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0152:
+    description: "[EASY] Supply Chain across 3 host(s) in engineering, corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0153:
+    description: "[EASY] Data Exfiltration across 2 host(s) in datacenter."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0154:
+    description: "[EASY] Cryptomining across 3 host(s) in datacenter, finance."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0155:
+    description: "[EASY] Credential Theft across 1 host(s) in finance."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0156:
+    description: "[EASY] Webshell across 1 host(s) in executive."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0157:
+    description: "[EASY] Privilege Escalation across 1 host(s) in executive, finance."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0158:
+    description: "[EASY] Botnet across 1 host(s) in dmz."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0159:
+    description: "[EASY] Privilege Escalation across 3 host(s) in datacenter, finance."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0160:
+    description: "[EASY] C2 Communication across 2 host(s) in executive, finance."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0161:
+    description: "[EASY] Insider Threat across 2 host(s) in engineering, datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0162:
+    description: "[EASY] Cryptomining across 1 host(s) in executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0163:
+    description: "[EASY] Phishing across 3 host(s) in datacenter, engineering."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0164:
+    description: "[EASY] Privilege Escalation across 3 host(s) in dmz, executive."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0165:
+    description: "[EASY] Credential Theft across 1 host(s) in executive."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0166:
+    description: "[EASY] Cryptomining across 2 host(s) in corporate, executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0167:
+    description: "[EASY] Lateral Movement across 2 host(s) in corporate, datacenter."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0168:
+    description: "[EASY] Cryptomining across 2 host(s) in datacenter."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0169:
+    description: "[EASY] C2 Communication across 1 host(s) in datacenter, corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0170:
+    description: "[EASY] Privilege Escalation across 3 host(s) in corporate."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0171:
+    description: "[EASY] Supply Chain across 1 host(s) in executive."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0172:
+    description: "[EASY] C2 Communication across 2 host(s) in executive, datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0173:
+    description: "[EASY] Privilege Escalation across 3 host(s) in datacenter, dmz."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0174:
+    description: "[EASY] Ransomware across 2 host(s) in engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0175:
+    description: "[EASY] Privilege Escalation across 2 host(s) in executive, dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0176:
+    description: "[EASY] C2 Communication across 1 host(s) in dmz."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0177:
+    description: "[EASY] Botnet across 1 host(s) in finance, executive."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0178:
+    description: "[EASY] Ransomware across 2 host(s) in finance, datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0179:
+    description: "[EASY] Botnet across 2 host(s) in corporate, executive."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0180:
+    description: "[EASY] Cryptomining across 2 host(s) in dmz, executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0181:
+    description: "[EASY] Supply Chain across 1 host(s) in executive, corporate."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0182:
+    description: "[EASY] Credential Theft across 3 host(s) in dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0183:
+    description: "[EASY] Data Exfiltration across 2 host(s) in corporate, executive."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0184:
+    description: "[EASY] Phishing across 2 host(s) in finance, engineering."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0185:
+    description: "[EASY] Webshell across 1 host(s) in executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0186:
+    description: "[EASY] Data Exfiltration across 3 host(s) in corporate, datacenter."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0187:
+    description: "[EASY] Botnet across 2 host(s) in datacenter."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0188:
+    description: "[EASY] Cryptomining across 3 host(s) in finance."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0189:
+    description: "[EASY] Insider Threat across 1 host(s) in finance."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0190:
+    description: "[EASY] C2 Communication across 3 host(s) in dmz."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0191:
+    description: "[EASY] Botnet across 3 host(s) in dmz, executive."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0192:
+    description: "[EASY] Webshell across 1 host(s) in dmz, corporate."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0193:
+    description: "[EASY] Ransomware across 2 host(s) in executive, datacenter."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0194:
+    description: "[EASY] C2 Communication across 3 host(s) in dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0195:
+    description: "[EASY] Phishing across 2 host(s) in executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0196:
+    description: "[EASY] Supply Chain across 3 host(s) in engineering."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0197:
+    description: "[EASY] Webshell across 2 host(s) in dmz, executive."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0198:
+    description: "[EASY] C2 Communication across 1 host(s) in dmz, executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0199:
+    description: "[EASY] C2 Communication across 2 host(s) in executive, engineering."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0200:
+    description: "[EASY] Cryptomining across 1 host(s) in executive, datacenter."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0201:
+    description: "[EASY] Supply Chain across 2 host(s) in engineering."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0202:
+    description: "[EASY] Botnet across 3 host(s) in finance."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0203:
+    description: "[EASY] Ransomware across 2 host(s) in engineering."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0204:
+    description: "[EASY] Lateral Movement across 3 host(s) in engineering, executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0205:
+    description: "[EASY] Webshell across 2 host(s) in corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0206:
+    description: "[EASY] Privilege Escalation across 2 host(s) in datacenter, dmz."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0207:
+    description: "[EASY] Data Exfiltration across 1 host(s) in engineering, dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0208:
+    description: "[EASY] Phishing across 1 host(s) in corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0209:
+    description: "[EASY] Webshell across 3 host(s) in finance."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0210:
+    description: "[EASY] Lateral Movement across 2 host(s) in corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0211:
+    description: "[EASY] Ransomware across 1 host(s) in corporate, executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0212:
+    description: "[EASY] Cryptomining across 2 host(s) in engineering."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0213:
+    description: "[EASY] Webshell across 3 host(s) in dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0214:
+    description: "[EASY] Phishing across 3 host(s) in datacenter, dmz."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0215:
+    description: "[EASY] Insider Threat across 2 host(s) in dmz, finance."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0216:
+    description: "[EASY] Botnet across 1 host(s) in executive, corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0217:
+    description: "[EASY] Lateral Movement across 3 host(s) in executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0218:
+    description: "[EASY] Data Exfiltration across 3 host(s) in finance, datacenter."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0219:
+    description: "[EASY] Supply Chain across 1 host(s) in finance."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0220:
+    description: "[EASY] Insider Threat across 1 host(s) in corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0221:
+    description: "[EASY] Insider Threat across 3 host(s) in corporate, executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0222:
+    description: "[EASY] Insider Threat across 2 host(s) in dmz."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0223:
+    description: "[EASY] Privilege Escalation across 3 host(s) in datacenter, executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0224:
+    description: "[EASY] Data Exfiltration across 1 host(s) in datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0225:
+    description: "[EASY] Data Exfiltration across 2 host(s) in engineering."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0226:
+    description: "[EASY] Phishing across 2 host(s) in finance."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0227:
+    description: "[EASY] Insider Threat across 3 host(s) in executive, dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0228:
+    description: "[EASY] Phishing across 2 host(s) in executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0229:
+    description: "[EASY] Phishing across 1 host(s) in corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0230:
+    description: "[EASY] Cryptomining across 1 host(s) in engineering."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0231:
+    description: "[EASY] Privilege Escalation across 1 host(s) in dmz."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0232:
+    description: "[EASY] Insider Threat across 1 host(s) in datacenter."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0233:
+    description: "[EASY] Ransomware across 1 host(s) in executive, dmz."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0234:
+    description: "[EASY] Lateral Movement across 1 host(s) in finance, dmz."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0235:
+    description: "[EASY] Phishing across 1 host(s) in dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0236:
+    description: "[EASY] Credential Theft across 3 host(s) in dmz, executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0237:
+    description: "[EASY] Insider Threat across 3 host(s) in dmz, engineering."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0238:
+    description: "[EASY] Insider Threat across 3 host(s) in corporate, executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0239:
+    description: "[EASY] Botnet across 3 host(s) in engineering, finance."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0240:
+    description: "[EASY] Insider Threat across 3 host(s) in finance."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0241:
+    description: "[EASY] Insider Threat across 1 host(s) in dmz."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0242:
+    description: "[EASY] Phishing across 2 host(s) in datacenter, dmz."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0243:
+    description: "[EASY] Insider Threat across 2 host(s) in finance, dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0244:
+    description: "[EASY] Botnet across 2 host(s) in engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0245:
+    description: "[EASY] C2 Communication across 3 host(s) in datacenter."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0246:
+    description: "[EASY] Insider Threat across 3 host(s) in dmz, corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0247:
+    description: "[EASY] Cryptomining across 2 host(s) in corporate, engineering."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0248:
+    description: "[EASY] Credential Theft across 3 host(s) in engineering."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0249:
+    description: "[EASY] Phishing across 1 host(s) in executive, engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0250:
+    description: "[EASY] Lateral Movement across 1 host(s) in corporate."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0251:
+    description: "[EASY] Webshell across 2 host(s) in executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0252:
+    description: "[EASY] Webshell across 1 host(s) in finance."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0253:
+    description: "[EASY] Data Exfiltration across 3 host(s) in corporate, engineering."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0254:
+    description: "[EASY] C2 Communication across 2 host(s) in corporate, dmz."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0255:
+    description: "[EASY] Credential Theft across 3 host(s) in datacenter, dmz."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0256:
+    description: "[EASY] Cryptomining across 3 host(s) in finance, dmz."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0257:
+    description: "[EASY] Webshell across 3 host(s) in dmz, corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0258:
+    description: "[EASY] Credential Theft across 3 host(s) in dmz, corporate."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0259:
+    description: "[EASY] Supply Chain across 2 host(s) in engineering."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0260:
+    description: "[EASY] Webshell across 2 host(s) in executive."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0261:
+    description: "[EASY] Webshell across 2 host(s) in executive, datacenter."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0262:
+    description: "[EASY] Supply Chain across 1 host(s) in executive."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0263:
+    description: "[EASY] Credential Theft across 1 host(s) in executive, engineering."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0264:
+    description: "[EASY] Cryptomining across 3 host(s) in datacenter, finance."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0265:
+    description: "[EASY] Phishing across 1 host(s) in engineering, dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0266:
+    description: "[EASY] C2 Communication across 2 host(s) in corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0267:
+    description: "[EASY] C2 Communication across 2 host(s) in executive, finance."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0268:
+    description: "[EASY] Botnet across 2 host(s) in finance, engineering."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0269:
+    description: "[EASY] C2 Communication across 3 host(s) in finance, corporate."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0270:
+    description: "[EASY] Cryptomining across 2 host(s) in finance, executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0271:
+    description: "[EASY] Webshell across 2 host(s) in engineering, dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0272:
+    description: "[EASY] C2 Communication across 1 host(s) in dmz, datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0273:
+    description: "[EASY] Ransomware across 2 host(s) in finance, engineering."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0274:
+    description: "[EASY] C2 Communication across 2 host(s) in datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0275:
+    description: "[EASY] Webshell across 1 host(s) in dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0276:
+    description: "[EASY] Credential Theft across 1 host(s) in datacenter, dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0277:
+    description: "[EASY] Supply Chain across 2 host(s) in dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0278:
+    description: "[EASY] Phishing across 1 host(s) in corporate, finance."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0279:
+    description: "[EASY] Supply Chain across 3 host(s) in dmz, datacenter."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0280:
+    description: "[EASY] Data Exfiltration across 3 host(s) in corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0281:
+    description: "[EASY] Data Exfiltration across 3 host(s) in executive, corporate."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0282:
+    description: "[EASY] Data Exfiltration across 2 host(s) in datacenter."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0283:
+    description: "[EASY] Lateral Movement across 1 host(s) in corporate, finance."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0284:
+    description: "[EASY] Insider Threat across 1 host(s) in executive."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0285:
+    description: "[EASY] C2 Communication across 1 host(s) in finance, datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0286:
+    description: "[EASY] Credential Theft across 2 host(s) in finance, datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0287:
+    description: "[EASY] Cryptomining across 2 host(s) in finance, engineering."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0288:
+    description: "[EASY] Privilege Escalation across 1 host(s) in corporate."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0289:
+    description: "[EASY] C2 Communication across 1 host(s) in engineering."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0290:
+    description: "[EASY] Botnet across 3 host(s) in executive, corporate."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0291:
+    description: "[EASY] Cryptomining across 1 host(s) in engineering, finance."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0292:
+    description: "[EASY] Supply Chain across 2 host(s) in corporate, datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0293:
+    description: "[EASY] Cryptomining across 1 host(s) in dmz, finance."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0294:
+    description: "[EASY] Botnet across 3 host(s) in corporate, executive."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0295:
+    description: "[EASY] Privilege Escalation across 1 host(s) in engineering, finance."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0296:
+    description: "[EASY] Credential Theft across 3 host(s) in dmz, executive."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0297:
+    description: "[EASY] Botnet across 2 host(s) in corporate, datacenter."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0298:
+    description: "[EASY] Lateral Movement across 3 host(s) in executive, dmz."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0299:
+    description: "[EASY] Data Exfiltration across 3 host(s) in dmz, datacenter."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0300:
+    description: "[EASY] Phishing across 2 host(s) in dmz, datacenter."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0301:
+    description: "[EASY] Botnet across 3 host(s) in corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0302:
+    description: "[EASY] Supply Chain across 1 host(s) in engineering, executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0303:
+    description: "[EASY] Supply Chain across 2 host(s) in corporate."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0304:
+    description: "[EASY] Webshell across 2 host(s) in corporate, dmz."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0305:
+    description: "[EASY] Insider Threat across 3 host(s) in datacenter, finance."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0306:
+    description: "[EASY] Phishing across 1 host(s) in corporate, dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0307:
+    description: "[EASY] Phishing across 3 host(s) in dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0308:
+    description: "[EASY] Supply Chain across 1 host(s) in executive, finance."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0309:
+    description: "[EASY] Credential Theft across 1 host(s) in datacenter."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0310:
+    description: "[EASY] Lateral Movement across 1 host(s) in engineering."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0311:
+    description: "[EASY] Supply Chain across 1 host(s) in engineering."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0312:
+    description: "[EASY] Lateral Movement across 3 host(s) in datacenter, engineering."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0313:
+    description: "[EASY] Credential Theft across 1 host(s) in executive."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0314:
+    description: "[EASY] Botnet across 1 host(s) in corporate."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0315:
+    description: "[EASY] Supply Chain across 1 host(s) in dmz."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0316:
+    description: "[EASY] Insider Threat across 1 host(s) in finance."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0317:
+    description: "[EASY] Lateral Movement across 3 host(s) in datacenter, finance."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0318:
+    description: "[EASY] Supply Chain across 1 host(s) in engineering, finance."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0319:
+    description: "[EASY] Privilege Escalation across 3 host(s) in finance, datacenter."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0320:
+    description: "[EASY] Lateral Movement across 3 host(s) in finance."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0321:
+    description: "[EASY] Credential Theft across 1 host(s) in corporate."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0322:
+    description: "[EASY] Credential Theft across 3 host(s) in corporate."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0323:
+    description: "[EASY] Data Exfiltration across 2 host(s) in finance."
+    max_steps: 15
+    difficulty: easy
+
+  gen_0324:
+    description: "[EASY] Ransomware across 1 host(s) in corporate, executive."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0325:
+    description: "[EASY] Data Exfiltration across 3 host(s) in dmz, finance."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0326:
+    description: "[EASY] Webshell across 2 host(s) in corporate, dmz."
+    max_steps: 12
+    difficulty: easy
+
+  gen_0327:
+    description: "[EASY] Privilege Escalation across 3 host(s) in engineering."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0328:
+    description: "[EASY] Lateral Movement across 2 host(s) in corporate."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0329:
+    description: "[EASY] Privilege Escalation across 2 host(s) in dmz, engineering."
+    max_steps: 17
+    difficulty: easy
+
+  gen_0330:
+    description: "[EASY] Supply Chain across 1 host(s) in datacenter, dmz."
+    max_steps: 18
+    difficulty: easy
+
+  gen_0331:
+    description: "[EASY] Data Exfiltration across 1 host(s) in executive."
+    max_steps: 16
+    difficulty: easy
+
+  gen_0332:
+    description: "[EASY] Credential Theft across 2 host(s) in datacenter, corporate."
+    max_steps: 14
+    difficulty: easy
+
+  gen_0333:
+    description: "[EASY] Botnet across 1 host(s) in finance."
+    max_steps: 13
+    difficulty: easy
+
+  gen_0334:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 7 host(s) in datacenter, corporate."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0335:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 7 host(s) in executive, datacenter, engineering, corporate."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0336:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in dmz, finance, corporate."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0337:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 4 host(s) in finance, corporate, datacenter."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0338:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in engineering, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0339:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 5 host(s) in datacenter, engineering, finance, dmz."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0340:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 2 host(s) in dmz, executive, finance, datacenter."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0341:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in finance, corporate."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0342:
+    description: "[MEDIUM] Credential Theft, Phishing across 3 host(s) in dmz, datacenter, finance, executive."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0343:
+    description: "[MEDIUM] Credential Theft, Phishing across 5 host(s) in datacenter, executive, corporate, finance."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0344:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 4 host(s) in executive, finance, engineering, dmz."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0345:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 3 host(s) in executive, dmz."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0346:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 5 host(s) in datacenter, finance."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0347:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 7 host(s) in engineering, executive."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0348:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in executive, finance, datacenter."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0349:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 5 host(s) in dmz, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0350:
+    description: "[MEDIUM] Credential Theft, Phishing across 5 host(s) in datacenter, finance."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0351:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 5 host(s) in executive, engineering, datacenter."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0352:
+    description: "[MEDIUM] Botnet, Cryptomining across 3 host(s) in dmz, engineering, executive."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0353:
+    description: "[MEDIUM] C2 Communication, Phishing across 4 host(s) in executive, corporate, datacenter."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0354:
+    description: "[MEDIUM] C2 Communication, Phishing across 6 host(s) in finance, executive, engineering, corporate."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0355:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 7 host(s) in finance, executive, dmz, datacenter."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0356:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 8 host(s) in dmz, engineering."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0357:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 8 host(s) in executive, datacenter, engineering, dmz."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0358:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 7 host(s) in corporate, engineering, datacenter."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0359:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 5 host(s) in executive, datacenter."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0360:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 3 host(s) in finance, engineering, executive, corporate."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0361:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 6 host(s) in datacenter, dmz, engineering, corporate."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0362:
+    description: "[MEDIUM] Botnet, Cryptomining across 4 host(s) in corporate, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0363:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in corporate, finance, dmz, datacenter."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0364:
+    description: "[MEDIUM] C2 Communication, Phishing across 2 host(s) in dmz, datacenter, engineering, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0365:
+    description: "[MEDIUM] Credential Theft, Phishing across 6 host(s) in engineering, corporate, finance, dmz."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0366:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 5 host(s) in dmz, engineering."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0367:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 4 host(s) in executive, engineering, finance."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0368:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in corporate, engineering."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0369:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 6 host(s) in datacenter, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0370:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 7 host(s) in corporate, dmz."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0371:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in dmz, executive."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0372:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 6 host(s) in datacenter, corporate, executive, finance."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0373:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 7 host(s) in datacenter, executive, engineering, finance."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0374:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 4 host(s) in engineering, dmz, finance, corporate."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0375:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 7 host(s) in datacenter, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0376:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 8 host(s) in corporate, dmz, datacenter."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0377:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in corporate, datacenter, engineering, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0378:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in dmz, engineering, datacenter, corporate."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0379:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 7 host(s) in finance, engineering, executive."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0380:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in executive, datacenter, dmz."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0381:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in dmz, finance, executive, engineering."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0382:
+    description: "[MEDIUM] Botnet, Cryptomining across 3 host(s) in corporate, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0383:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in dmz, engineering."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0384:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in engineering, executive, dmz, finance."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0385:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 6 host(s) in dmz, finance."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0386:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 4 host(s) in engineering, datacenter."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0387:
+    description: "[MEDIUM] C2 Communication, Phishing across 4 host(s) in finance, datacenter, corporate, engineering."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0388:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in executive, dmz, datacenter, finance."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0389:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 5 host(s) in corporate, datacenter, finance, executive."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0390:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in executive, corporate, engineering."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0391:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in corporate, dmz."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0392:
+    description: "[MEDIUM] Credential Theft, Phishing across 5 host(s) in dmz, datacenter, corporate, finance."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0393:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 9 host(s) in engineering, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0394:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 6 host(s) in datacenter, executive, dmz."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0395:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in dmz, corporate, datacenter, engineering."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0396:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 4 host(s) in corporate, engineering, dmz."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0397:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 5 host(s) in finance, executive, datacenter, engineering."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0398:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in finance, engineering."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0399:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in datacenter, executive, engineering."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0400:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 5 host(s) in datacenter, dmz, executive, finance."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0401:
+    description: "[MEDIUM] Botnet, Cryptomining across 2 host(s) in datacenter, engineering, dmz, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0402:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in corporate, engineering, finance, datacenter."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0403:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in executive, dmz, datacenter, corporate."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0404:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in datacenter, dmz, executive, engineering."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0405:
+    description: "[MEDIUM] C2 Communication, Phishing across 6 host(s) in corporate, executive."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0406:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 3 host(s) in corporate, dmz."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0407:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 4 host(s) in corporate, datacenter."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0408:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 2 host(s) in corporate, executive, finance."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0409:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 6 host(s) in datacenter, dmz, executive, finance."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0410:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 6 host(s) in engineering, corporate."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0411:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 7 host(s) in executive, dmz, finance."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0412:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 7 host(s) in engineering, corporate."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0413:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 4 host(s) in dmz, engineering, finance, executive."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0414:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 7 host(s) in executive, dmz, engineering, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0415:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 4 host(s) in datacenter, engineering, finance."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0416:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in corporate, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0417:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in corporate, datacenter."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0418:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in dmz, finance, datacenter, corporate."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0419:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 6 host(s) in executive, dmz, corporate, datacenter."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0420:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in executive, engineering."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0421:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 7 host(s) in datacenter, finance, corporate, dmz."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0422:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in finance, datacenter, executive, corporate."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0423:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 4 host(s) in datacenter, executive, engineering."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0424:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in engineering, executive, datacenter."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0425:
+    description: "[MEDIUM] Credential Theft, Phishing across 5 host(s) in corporate, engineering."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0426:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 5 host(s) in dmz, corporate, datacenter."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0427:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in corporate, datacenter, dmz, finance."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0428:
+    description: "[MEDIUM] Botnet, Cryptomining across 5 host(s) in corporate, datacenter, engineering."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0429:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 6 host(s) in datacenter, corporate, executive, dmz."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0430:
+    description: "[MEDIUM] Botnet, Cryptomining across 6 host(s) in executive, engineering."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0431:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 3 host(s) in executive, datacenter, corporate."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0432:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 8 host(s) in corporate, dmz, executive, finance."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0433:
+    description: "[MEDIUM] Credential Theft, Phishing across 3 host(s) in corporate, engineering."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0434:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in finance, datacenter, engineering."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0435:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in dmz, datacenter, executive, engineering."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0436:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 6 host(s) in executive, corporate, engineering, finance."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0437:
+    description: "[MEDIUM] Botnet, Cryptomining across 3 host(s) in engineering, datacenter, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0438:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in datacenter, engineering."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0439:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 5 host(s) in datacenter, dmz."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0440:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 9 host(s) in finance, datacenter, engineering, executive."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0441:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 7 host(s) in datacenter, executive, engineering, dmz."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0442:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 5 host(s) in dmz, executive, datacenter."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0443:
+    description: "[MEDIUM] C2 Communication, Phishing across 4 host(s) in corporate, finance, executive."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0444:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 5 host(s) in corporate, dmz."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0445:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 6 host(s) in dmz, datacenter, engineering, corporate."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0446:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 4 host(s) in dmz, executive, finance, corporate."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0447:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 6 host(s) in corporate, finance."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0448:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 7 host(s) in executive, corporate."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0449:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 5 host(s) in executive, finance."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0450:
+    description: "[MEDIUM] Botnet, Cryptomining across 4 host(s) in finance, engineering, dmz, executive."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0451:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 5 host(s) in datacenter, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0452:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 3 host(s) in corporate, datacenter."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0453:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in executive, engineering, datacenter, dmz."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0454:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in executive, datacenter, engineering, corporate."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0455:
+    description: "[MEDIUM] Botnet, Cryptomining across 6 host(s) in dmz, datacenter."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0456:
+    description: "[MEDIUM] C2 Communication, Phishing across 6 host(s) in datacenter, engineering, finance, corporate."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0457:
+    description: "[MEDIUM] C2 Communication, Phishing across 2 host(s) in corporate, datacenter."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0458:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 6 host(s) in corporate, engineering."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0459:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 5 host(s) in executive, finance, dmz."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0460:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 5 host(s) in dmz, engineering, executive, finance."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0461:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 2 host(s) in executive, dmz."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0462:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 8 host(s) in engineering, dmz, finance, datacenter."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0463:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 4 host(s) in finance, datacenter, executive."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0464:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in corporate, executive, datacenter, finance."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0465:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 3 host(s) in dmz, executive."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0466:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 2 host(s) in datacenter, dmz."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0467:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in corporate, executive."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0468:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in engineering, corporate."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0469:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 5 host(s) in dmz, executive."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0470:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 4 host(s) in executive, datacenter."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0471:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 8 host(s) in datacenter, corporate, dmz."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0472:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 5 host(s) in finance, datacenter, dmz."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0473:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in datacenter, finance, corporate, dmz."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0474:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in executive, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0475:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 6 host(s) in engineering, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0476:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in engineering, datacenter, finance, executive."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0477:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in engineering, finance, executive, dmz."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0478:
+    description: "[MEDIUM] Credential Theft, Phishing across 6 host(s) in executive, engineering, finance."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0479:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 2 host(s) in datacenter, finance."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0480:
+    description: "[MEDIUM] Botnet, Cryptomining across 5 host(s) in executive, dmz, datacenter, corporate."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0481:
+    description: "[MEDIUM] Botnet, Cryptomining across 5 host(s) in finance, datacenter, corporate, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0482:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 3 host(s) in datacenter, engineering, finance."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0483:
+    description: "[MEDIUM] Credential Theft, Phishing across 5 host(s) in finance, dmz, engineering."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0484:
+    description: "[MEDIUM] C2 Communication, Phishing across 4 host(s) in datacenter, dmz."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0485:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 6 host(s) in engineering, executive."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0486:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in executive, dmz, corporate, engineering."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0487:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 2 host(s) in dmz, executive, engineering."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0488:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 6 host(s) in datacenter, executive, dmz, corporate."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0489:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in corporate, finance."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0490:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in executive, datacenter, finance, engineering."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0491:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 6 host(s) in dmz, corporate."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0492:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 2 host(s) in datacenter, dmz."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0493:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 6 host(s) in corporate, finance, engineering, datacenter."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0494:
+    description: "[MEDIUM] Credential Theft, Phishing across 5 host(s) in corporate, executive, finance, dmz."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0495:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 5 host(s) in corporate, engineering."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0496:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 6 host(s) in corporate, engineering, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0497:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in corporate, dmz, datacenter, executive."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0498:
+    description: "[MEDIUM] Botnet, Cryptomining across 4 host(s) in finance, dmz, corporate, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0499:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in corporate, datacenter, engineering."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0500:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in finance, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0501:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 7 host(s) in finance, executive, datacenter, corporate."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0502:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in corporate, datacenter, engineering."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0503:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in finance, engineering, datacenter."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0504:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in corporate, executive."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0505:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 4 host(s) in dmz, corporate, finance."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0506:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 4 host(s) in engineering, executive, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0507:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 7 host(s) in executive, engineering, datacenter, finance."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0508:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 7 host(s) in finance, dmz, executive."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0509:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 3 host(s) in dmz, datacenter, finance, engineering."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0510:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in finance, datacenter, corporate."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0511:
+    description: "[MEDIUM] Botnet, Cryptomining across 6 host(s) in executive, dmz, corporate, finance."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0512:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 6 host(s) in dmz, executive, datacenter."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0513:
+    description: "[MEDIUM] C2 Communication, Phishing across 4 host(s) in dmz, engineering."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0514:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in datacenter, corporate."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0515:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 5 host(s) in engineering, corporate."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0516:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 8 host(s) in engineering, dmz, executive, corporate."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0517:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in dmz, engineering, executive."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0518:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in dmz, engineering, datacenter."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0519:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in finance, corporate."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0520:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 3 host(s) in executive, corporate, datacenter."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0521:
+    description: "[MEDIUM] C2 Communication, Phishing across 2 host(s) in datacenter, corporate."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0522:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 7 host(s) in finance, corporate, engineering, dmz."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0523:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 5 host(s) in corporate, datacenter, finance, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0524:
+    description: "[MEDIUM] Botnet, Cryptomining across 5 host(s) in finance, engineering, dmz."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0525:
+    description: "[MEDIUM] Credential Theft, Phishing across 3 host(s) in corporate, finance, dmz."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0526:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in corporate, datacenter, finance."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0527:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 6 host(s) in dmz, executive, engineering, datacenter."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0528:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in datacenter, executive, corporate."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0529:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 2 host(s) in datacenter, dmz, engineering, finance."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0530:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 7 host(s) in datacenter, engineering, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0531:
+    description: "[MEDIUM] Botnet, Cryptomining across 5 host(s) in finance, dmz, executive, datacenter."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0532:
+    description: "[MEDIUM] Botnet, Cryptomining across 4 host(s) in dmz, executive, finance."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0533:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in corporate, executive, finance, datacenter."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0534:
+    description: "[MEDIUM] C2 Communication, Phishing across 5 host(s) in corporate, engineering, datacenter."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0535:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 2 host(s) in executive, dmz, datacenter, corporate."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0536:
+    description: "[MEDIUM] C2 Communication, Phishing across 2 host(s) in dmz, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0537:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 7 host(s) in finance, datacenter, corporate, dmz."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0538:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in corporate, dmz, engineering."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0539:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in executive, datacenter, engineering, dmz."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0540:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in executive, engineering, datacenter, finance."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0541:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in executive, engineering, finance."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0542:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 8 host(s) in corporate, executive, engineering."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0543:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 8 host(s) in executive, datacenter, engineering."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0544:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 8 host(s) in corporate, finance, dmz."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0545:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 4 host(s) in executive, dmz, finance, engineering."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0546:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in finance, corporate, executive."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0547:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 8 host(s) in dmz, executive."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0548:
+    description: "[MEDIUM] C2 Communication, Phishing across 5 host(s) in finance, engineering, dmz."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0549:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 2 host(s) in engineering, corporate, datacenter."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0550:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 7 host(s) in executive, datacenter."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0551:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in engineering, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0552:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 5 host(s) in executive, corporate, dmz, datacenter."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0553:
+    description: "[MEDIUM] Botnet, Cryptomining across 4 host(s) in corporate, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0554:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 4 host(s) in engineering, dmz, corporate, executive."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0555:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in executive, corporate, engineering, dmz."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0556:
+    description: "[MEDIUM] Credential Theft, Phishing across 5 host(s) in datacenter, finance, executive."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0557:
+    description: "[MEDIUM] Botnet, Cryptomining across 5 host(s) in datacenter, corporate."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0558:
+    description: "[MEDIUM] Botnet, Cryptomining across 6 host(s) in datacenter, dmz."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0559:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in corporate, dmz."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0560:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in finance, executive."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0561:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in executive, engineering, datacenter."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0562:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 7 host(s) in engineering, dmz, datacenter, corporate."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0563:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 4 host(s) in datacenter, engineering, finance."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0564:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 5 host(s) in engineering, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0565:
+    description: "[MEDIUM] Botnet, Cryptomining across 3 host(s) in datacenter, corporate, dmz, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0566:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in corporate, engineering."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0567:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 5 host(s) in datacenter, engineering, executive."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0568:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 7 host(s) in executive, datacenter, dmz."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0569:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 4 host(s) in finance, corporate, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0570:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 5 host(s) in engineering, executive, datacenter, dmz."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0571:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 4 host(s) in corporate, datacenter, engineering."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0572:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 5 host(s) in finance, dmz, executive."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0573:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in finance, corporate, dmz."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0574:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 2 host(s) in finance, dmz, datacenter, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0575:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 4 host(s) in dmz, engineering, finance, corporate."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0576:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 6 host(s) in corporate, finance, engineering, executive."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0577:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 6 host(s) in engineering, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0578:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 7 host(s) in finance, engineering, executive, corporate."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0579:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 6 host(s) in datacenter, finance, engineering."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0580:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 6 host(s) in finance, dmz."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0581:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in finance, engineering, executive, dmz."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0582:
+    description: "[MEDIUM] C2 Communication, Phishing across 4 host(s) in corporate, dmz, executive, engineering."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0583:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in dmz, finance, datacenter, corporate."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0584:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in dmz, executive, corporate."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0585:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in engineering, finance, dmz, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0586:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in dmz, datacenter."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0587:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 4 host(s) in datacenter, executive, dmz."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0588:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 6 host(s) in executive, datacenter."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0589:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 5 host(s) in engineering, dmz, datacenter."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0590:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in finance, corporate, executive, datacenter."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0591:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in engineering, dmz, datacenter."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0592:
+    description: "[MEDIUM] C2 Communication, Phishing across 4 host(s) in corporate, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0593:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in finance, executive."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0594:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in finance, executive, corporate, dmz."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0595:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 8 host(s) in engineering, finance, dmz."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0596:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 4 host(s) in corporate, finance, engineering, executive."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0597:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 2 host(s) in finance, executive."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0598:
+    description: "[MEDIUM] Botnet, Cryptomining across 4 host(s) in datacenter, engineering, dmz."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0599:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in finance, dmz."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0600:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 5 host(s) in executive, datacenter, corporate, finance."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0601:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in finance, datacenter, corporate, dmz."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0602:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 5 host(s) in executive, engineering, finance, datacenter."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0603:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in corporate, datacenter, finance."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0604:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in corporate, dmz, executive."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0605:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 4 host(s) in dmz, corporate, engineering."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0606:
+    description: "[MEDIUM] Botnet, Cryptomining across 4 host(s) in finance, corporate, dmz."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0607:
+    description: "[MEDIUM] C2 Communication, Phishing across 6 host(s) in dmz, finance."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0608:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 5 host(s) in datacenter, engineering, corporate, finance."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0609:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in executive, engineering, corporate, finance."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0610:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in finance, engineering."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0611:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 9 host(s) in dmz, engineering, executive."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0612:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 3 host(s) in engineering, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0613:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 6 host(s) in corporate, dmz, finance, engineering."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0614:
+    description: "[MEDIUM] Botnet, Cryptomining across 4 host(s) in engineering, finance."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0615:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 4 host(s) in engineering, finance, dmz, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0616:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 3 host(s) in executive, corporate."
+    max_steps: 25
+    difficulty: medium
+
+  gen_0617:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 6 host(s) in dmz, executive, engineering."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0618:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in dmz, engineering, corporate."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0619:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in finance, datacenter, dmz, executive."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0620:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 3 host(s) in corporate, engineering."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0621:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in datacenter, corporate."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0622:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 7 host(s) in datacenter, executive, corporate."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0623:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 3 host(s) in engineering, corporate, executive, dmz."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0624:
+    description: "[MEDIUM] Botnet, Cryptomining across 2 host(s) in engineering, executive, finance."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0625:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 8 host(s) in finance, engineering, datacenter."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0626:
+    description: "[MEDIUM] Credential Theft, Phishing across 3 host(s) in engineering, executive, finance."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0627:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 5 host(s) in dmz, engineering, datacenter, corporate."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0628:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 6 host(s) in finance, datacenter."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0629:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 5 host(s) in dmz, executive."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0630:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in engineering, executive."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0631:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 8 host(s) in corporate, dmz."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0632:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 6 host(s) in finance, corporate."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0633:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 5 host(s) in executive, dmz, datacenter, engineering."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0634:
+    description: "[MEDIUM] Credential Theft, Phishing across 5 host(s) in corporate, finance, engineering, executive."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0635:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 7 host(s) in finance, dmz, datacenter, engineering."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0636:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in dmz, executive, engineering, datacenter."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0637:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 5 host(s) in datacenter, executive, engineering, corporate."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0638:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 5 host(s) in corporate, engineering, dmz."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0639:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 7 host(s) in corporate, datacenter, engineering."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0640:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 8 host(s) in dmz, engineering, datacenter."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0641:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in executive, engineering, datacenter."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0642:
+    description: "[MEDIUM] C2 Communication, Phishing across 4 host(s) in executive, corporate, dmz."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0643:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in finance, corporate, engineering."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0644:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 5 host(s) in dmz, finance."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0645:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 3 host(s) in executive, dmz, datacenter, engineering."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0646:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in engineering, datacenter, dmz."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0647:
+    description: "[MEDIUM] Botnet, Cryptomining across 3 host(s) in corporate, datacenter, finance, engineering."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0648:
+    description: "[MEDIUM] C2 Communication, Phishing across 6 host(s) in finance, dmz, engineering, corporate."
+    max_steps: 26
+    difficulty: medium
+
+  gen_0649:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 6 host(s) in dmz, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0650:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 7 host(s) in executive, engineering."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0651:
+    description: "[MEDIUM] Credential Theft, Supply Chain, C2 Communication across 7 host(s) in finance, corporate."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0652:
+    description: "[MEDIUM] C2 Communication, Phishing across 6 host(s) in dmz, corporate."
+    max_steps: 21
+    difficulty: medium
+
+  gen_0653:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in dmz, engineering, corporate, finance."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0654:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 4 host(s) in datacenter, engineering, dmz, finance."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0655:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in datacenter, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0656:
+    description: "[MEDIUM] Botnet, Lateral Movement, Cryptomining across 8 host(s) in executive, corporate, finance, datacenter."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0657:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 4 host(s) in datacenter, corporate, engineering."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0658:
+    description: "[MEDIUM] Webshell, Lateral Movement, Privilege Escalation across 5 host(s) in engineering, corporate, datacenter."
+    max_steps: 20
+    difficulty: medium
+
+  gen_0659:
+    description: "[MEDIUM] Lateral Movement, Credential Theft, Phishing across 6 host(s) in finance, corporate, engineering."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0660:
+    description: "[MEDIUM] C2 Communication, Phishing across 3 host(s) in engineering, datacenter."
+    max_steps: 28
+    difficulty: medium
+
+  gen_0661:
+    description: "[MEDIUM] Credential Theft, Phishing across 4 host(s) in datacenter, engineering, dmz."
+    max_steps: 24
+    difficulty: medium
+
+  gen_0662:
+    description: "[MEDIUM] C2 Communication, Phishing, Data Exfiltration across 6 host(s) in engineering, corporate."
+    max_steps: 22
+    difficulty: medium
+
+  gen_0663:
+    description: "[MEDIUM] Supply Chain, C2 Communication across 4 host(s) in engineering, corporate, executive."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0664:
+    description: "[MEDIUM] Webshell, Privilege Escalation across 3 host(s) in corporate, executive, finance."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0665:
+    description: "[MEDIUM] Botnet, Cryptomining across 5 host(s) in dmz, datacenter, executive, finance."
+    max_steps: 23
+    difficulty: medium
+
+  gen_0666:
+    description: "[MEDIUM] Insider Threat, Data Exfiltration across 4 host(s) in engineering, corporate, finance, datacenter."
+    max_steps: 27
+    difficulty: medium
+
+  gen_0667:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 9 host(s) in executive, dmz, corporate, engineering."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0668:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 9 host(s) in finance, corporate, datacenter, dmz, engineering, executive."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0669:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 7 host(s) in datacenter, dmz, executive."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0670:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 8 host(s) in datacenter, finance, executive, dmz, corporate."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0671:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 11 host(s) in executive, engineering, finance."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0672:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 11 host(s) in corporate, engineering, executive, dmz, datacenter."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0673:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 5 host(s) in executive, datacenter, engineering, finance, corporate."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0674:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 8 host(s) in executive, datacenter, engineering."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0675:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 10 host(s) in engineering, finance, corporate, executive, datacenter."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0676:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 10 host(s) in dmz, engineering, finance."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0677:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 6 host(s) in datacenter, finance, corporate, engineering, dmz, executive."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0678:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 7 host(s) in corporate, executive, finance, dmz."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0679:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 4 host(s) in dmz, datacenter, finance, engineering, corporate."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0680:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 10 host(s) in executive, dmz, corporate."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0681:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 11 host(s) in dmz, executive, finance, corporate, engineering."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0682:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 12 host(s) in engineering, corporate, dmz, finance."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0683:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in datacenter, engineering, dmz, finance, corporate, executive."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0684:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 8 host(s) in dmz, finance, corporate."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0685:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 9 host(s) in engineering, dmz, datacenter, corporate, executive, finance."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0686:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 7 host(s) in dmz, datacenter, finance."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0687:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 13 host(s) in finance, datacenter, dmz, corporate, executive, engineering."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0688:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 9 host(s) in datacenter, finance, corporate, executive, dmz, engineering."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0689:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 6 host(s) in corporate, dmz, engineering, datacenter, executive, finance."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0690:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 12 host(s) in executive, finance, engineering."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0691:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 14 host(s) in datacenter, finance, engineering, corporate, executive, dmz."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0692:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 13 host(s) in executive, corporate, finance."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0693:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 5 host(s) in dmz, datacenter, corporate."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0694:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in finance, dmz, corporate, engineering, executive, datacenter."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0695:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 13 host(s) in finance, corporate, engineering, executive."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0696:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 11 host(s) in engineering, finance, dmz, executive, corporate, datacenter."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0697:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 7 host(s) in corporate, datacenter, finance."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0698:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 8 host(s) in datacenter, dmz, corporate, executive."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0699:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 5 host(s) in finance, corporate, engineering, datacenter, executive."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0700:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 11 host(s) in corporate, engineering, datacenter."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0701:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 9 host(s) in corporate, executive, dmz."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0702:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 6 host(s) in dmz, executive, corporate, engineering, datacenter."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0703:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 8 host(s) in engineering, executive, corporate."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0704:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 11 host(s) in dmz, datacenter, finance."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0705:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 11 host(s) in executive, dmz, datacenter, engineering, corporate."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0706:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 10 host(s) in corporate, executive, dmz, finance."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0707:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 10 host(s) in executive, dmz, finance, engineering."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0708:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 9 host(s) in dmz, datacenter, engineering, corporate, executive, finance."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0709:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 4 host(s) in finance, engineering, corporate."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0710:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 11 host(s) in finance, executive, engineering."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0711:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 6 host(s) in finance, dmz, datacenter."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0712:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 7 host(s) in dmz, engineering, corporate, datacenter, finance."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0713:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 8 host(s) in executive, corporate, engineering, datacenter."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0714:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 8 host(s) in executive, dmz, finance, datacenter."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0715:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 13 host(s) in finance, executive, dmz."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0716:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 11 host(s) in datacenter, dmz, executive, corporate, engineering."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0717:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in corporate, datacenter, dmz."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0718:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 6 host(s) in executive, datacenter, finance, dmz, corporate, engineering."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0719:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 8 host(s) in dmz, finance, executive, engineering, corporate."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0720:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 6 host(s) in dmz, engineering, datacenter, finance."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0721:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 7 host(s) in finance, executive, engineering, dmz, datacenter, corporate."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0722:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 8 host(s) in engineering, datacenter, executive, corporate, dmz, finance."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0723:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 5 host(s) in dmz, engineering, finance, corporate, executive."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0724:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in executive, finance, dmz, datacenter, corporate, engineering."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0725:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 12 host(s) in executive, datacenter, dmz, engineering, finance, corporate."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0726:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 10 host(s) in engineering, finance, datacenter."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0727:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 6 host(s) in finance, corporate, datacenter, engineering, dmz."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0728:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 7 host(s) in dmz, engineering, executive, finance, datacenter, corporate."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0729:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 11 host(s) in executive, finance, corporate, dmz, datacenter, engineering."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0730:
+    description: "[HARD] Data Exfiltration, Insider Threat, Privilege Escalation across 6 host(s) in finance, datacenter, executive, engineering, dmz, corporate."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0731:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 9 host(s) in corporate, executive, finance, datacenter."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0732:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 8 host(s) in corporate, finance, datacenter."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0733:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 9 host(s) in finance, corporate, engineering."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0734:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 10 host(s) in finance, datacenter, engineering, corporate, dmz."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0735:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 10 host(s) in corporate, finance, datacenter, dmz, executive, engineering."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0736:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 12 host(s) in engineering, finance, dmz, executive."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0737:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 10 host(s) in engineering, finance, corporate, dmz, executive, datacenter."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0738:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 11 host(s) in engineering, corporate, datacenter, dmz, executive, finance."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0739:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in datacenter, dmz, finance, executive, corporate, engineering."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0740:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 5 host(s) in corporate, dmz, datacenter, finance."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0741:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 13 host(s) in dmz, engineering, corporate."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0742:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 4 host(s) in engineering, dmz, executive, corporate."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0743:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 10 host(s) in corporate, engineering, finance, executive, datacenter."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0744:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 7 host(s) in dmz, corporate, finance, engineering, executive."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0745:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 12 host(s) in corporate, dmz, finance, executive, datacenter, engineering."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0746:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in finance, engineering, dmz."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0747:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 6 host(s) in engineering, corporate, executive, finance."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0748:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 8 host(s) in engineering, datacenter, corporate, executive, dmz."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0749:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 11 host(s) in finance, executive, datacenter, engineering, dmz."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0750:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 10 host(s) in engineering, datacenter, executive, dmz."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0751:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 11 host(s) in finance, corporate, datacenter, engineering, dmz."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0752:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in corporate, executive, dmz, finance, datacenter, engineering."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0753:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 7 host(s) in executive, datacenter, corporate, finance, dmz, engineering."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0754:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 11 host(s) in datacenter, corporate, executive."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0755:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 4 host(s) in dmz, executive, finance."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0756:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in executive, corporate, finance."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0757:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 9 host(s) in datacenter, corporate, engineering, finance, executive."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0758:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in corporate, finance, engineering, datacenter, dmz."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0759:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 11 host(s) in corporate, dmz, datacenter, engineering, executive, finance."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0760:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 11 host(s) in datacenter, finance, executive."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0761:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 7 host(s) in executive, corporate, finance."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0762:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 9 host(s) in finance, datacenter, corporate, executive."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0763:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 8 host(s) in corporate, executive, datacenter, engineering."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0764:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 5 host(s) in executive, dmz, engineering, finance, corporate."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0765:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in engineering, datacenter, corporate, finance."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0766:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 6 host(s) in finance, engineering, dmz, datacenter, executive, corporate."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0767:
+    description: "[HARD] Webshell, C2 Communication, Privilege Escalation across 5 host(s) in corporate, executive, engineering, finance, dmz."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0768:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in finance, engineering, dmz, datacenter, corporate."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0769:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 10 host(s) in engineering, dmz, corporate."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0770:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 10 host(s) in dmz, datacenter, executive, engineering, corporate."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0771:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 7 host(s) in finance, engineering, datacenter, corporate, dmz."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0772:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 11 host(s) in engineering, datacenter, dmz, corporate, executive."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0773:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 11 host(s) in engineering, executive, datacenter."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0774:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 9 host(s) in dmz, corporate, finance, engineering, executive, datacenter."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0775:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 7 host(s) in finance, dmz, datacenter, executive, engineering."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0776:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 9 host(s) in finance, corporate, dmz, executive."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0777:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 8 host(s) in dmz, engineering, finance."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0778:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in corporate, finance, datacenter, dmz."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0779:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 8 host(s) in corporate, dmz, engineering, finance, executive, datacenter."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0780:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 8 host(s) in datacenter, dmz, finance, engineering, corporate, executive."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0781:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 4 host(s) in finance, engineering, dmz, corporate."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0782:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 5 host(s) in finance, corporate, dmz, datacenter, executive."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0783:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 11 host(s) in corporate, finance, engineering."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0784:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 8 host(s) in executive, corporate, finance, datacenter."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0785:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in finance, dmz, corporate."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0786:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 12 host(s) in executive, corporate, finance, datacenter."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0787:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 8 host(s) in dmz, executive, engineering, corporate."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0788:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 9 host(s) in engineering, dmz, datacenter."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0789:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 6 host(s) in engineering, executive, finance."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0790:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 7 host(s) in dmz, datacenter, finance."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0791:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 10 host(s) in finance, corporate, engineering, datacenter."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0792:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 7 host(s) in corporate, dmz, executive."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0793:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 10 host(s) in corporate, finance, datacenter, dmz."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0794:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 9 host(s) in engineering, dmz, datacenter, finance, executive, corporate."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0795:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 8 host(s) in dmz, engineering, executive, corporate, datacenter."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0796:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 5 host(s) in engineering, executive, dmz, finance, corporate."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0797:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 10 host(s) in corporate, datacenter, dmz, engineering."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0798:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in corporate, engineering, datacenter, executive."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0799:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 7 host(s) in corporate, dmz, executive, datacenter."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0800:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 14 host(s) in datacenter, executive, engineering."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0801:
+    description: "[HARD] Webshell, C2 Communication, Privilege Escalation across 7 host(s) in finance, dmz, datacenter, executive."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0802:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in finance, corporate, datacenter, dmz, engineering."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0803:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 7 host(s) in corporate, engineering, datacenter, executive, finance, dmz."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0804:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 9 host(s) in datacenter, finance, dmz."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0805:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 10 host(s) in corporate, finance, engineering, dmz, executive, datacenter."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0806:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 10 host(s) in executive, corporate, finance, dmz."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0807:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in corporate, finance, executive."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0808:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 12 host(s) in engineering, dmz, executive, datacenter, corporate, finance."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0809:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 7 host(s) in finance, datacenter, executive, engineering."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0810:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 4 host(s) in engineering, finance, dmz, datacenter, executive."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0811:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in dmz, datacenter, executive, engineering, corporate, finance."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0812:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 7 host(s) in finance, engineering, dmz, executive."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0813:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 6 host(s) in engineering, executive, finance, corporate, dmz, datacenter."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0814:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 10 host(s) in engineering, dmz, datacenter, corporate, executive, finance."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0815:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 9 host(s) in finance, executive, datacenter, corporate, engineering, dmz."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0816:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 7 host(s) in executive, finance, datacenter."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0817:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 13 host(s) in corporate, engineering, executive, dmz."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0818:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 8 host(s) in engineering, executive, dmz."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0819:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 7 host(s) in engineering, datacenter, corporate, finance, dmz, executive."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0820:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in corporate, finance, datacenter, dmz."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0821:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 8 host(s) in dmz, engineering, finance."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0822:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 12 host(s) in finance, engineering, executive, dmz, corporate, datacenter."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0823:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 9 host(s) in dmz, executive, datacenter, corporate, finance."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0824:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 12 host(s) in datacenter, finance, engineering."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0825:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 9 host(s) in datacenter, dmz, finance."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0826:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 7 host(s) in engineering, corporate, executive, datacenter."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0827:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 6 host(s) in executive, datacenter, finance, engineering, corporate."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0828:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 11 host(s) in datacenter, executive, corporate, engineering, dmz."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0829:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 6 host(s) in finance, dmz, executive, corporate, datacenter."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0830:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 5 host(s) in dmz, engineering, datacenter."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0831:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 7 host(s) in dmz, datacenter, finance, executive, engineering."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0832:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 12 host(s) in engineering, corporate, executive."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0833:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 4 host(s) in executive, corporate, engineering, datacenter."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0834:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 8 host(s) in corporate, finance, datacenter, executive, engineering, dmz."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0835:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in corporate, dmz, datacenter, executive."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0836:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 6 host(s) in executive, engineering, finance."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0837:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 7 host(s) in dmz, corporate, finance, datacenter."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0838:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 7 host(s) in engineering, finance, datacenter, executive, dmz, corporate."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0839:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 8 host(s) in dmz, executive, corporate, engineering."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0840:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 9 host(s) in dmz, engineering, datacenter."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0841:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 9 host(s) in datacenter, dmz, finance, corporate, executive."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0842:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 7 host(s) in corporate, engineering, dmz, finance, datacenter."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0843:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 11 host(s) in engineering, datacenter, dmz."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0844:
+    description: "[HARD] Data Exfiltration, Insider Threat, Privilege Escalation across 6 host(s) in executive, dmz, engineering, datacenter."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0845:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 9 host(s) in corporate, dmz, finance, datacenter, engineering, executive."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0846:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 11 host(s) in dmz, corporate, finance, datacenter, executive, engineering."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0847:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 8 host(s) in datacenter, dmz, executive, engineering, corporate, finance."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0848:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 6 host(s) in corporate, datacenter, engineering, dmz, finance."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0849:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 7 host(s) in finance, executive, corporate, datacenter, dmz, engineering."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0850:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 8 host(s) in engineering, executive, finance, corporate, datacenter, dmz."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0851:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 9 host(s) in executive, finance, dmz, corporate, datacenter, engineering."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0852:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 10 host(s) in datacenter, finance, executive, engineering, corporate."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0853:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 12 host(s) in datacenter, corporate, engineering, finance, dmz."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0854:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 9 host(s) in executive, dmz, finance, datacenter, corporate, engineering."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0855:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 11 host(s) in dmz, datacenter, executive."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0856:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 5 host(s) in dmz, corporate, engineering, finance, datacenter, executive."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0857:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 4 host(s) in dmz, corporate, datacenter."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0858:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in engineering, corporate, datacenter."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0859:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 5 host(s) in dmz, engineering, datacenter, executive, corporate."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0860:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in engineering, executive, datacenter, dmz, finance, corporate."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0861:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 7 host(s) in engineering, finance, datacenter."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0862:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 10 host(s) in finance, datacenter, dmz."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0863:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 9 host(s) in dmz, finance, engineering, datacenter, executive, corporate."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0864:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 9 host(s) in dmz, datacenter, engineering."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0865:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 10 host(s) in executive, corporate, finance, datacenter."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0866:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in executive, corporate, engineering, datacenter, dmz, finance."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0867:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 7 host(s) in engineering, dmz, finance, datacenter, executive."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0868:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 5 host(s) in executive, corporate, finance."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0869:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 6 host(s) in finance, dmz, executive."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0870:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 6 host(s) in datacenter, finance, executive, engineering."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0871:
+    description: "[HARD] Webshell, C2 Communication, Privilege Escalation across 6 host(s) in corporate, dmz, finance."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0872:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 7 host(s) in engineering, executive, finance, dmz, corporate."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0873:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 10 host(s) in executive, finance, corporate, engineering, datacenter."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0874:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in corporate, finance, executive, dmz."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0875:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 7 host(s) in executive, datacenter, dmz."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0876:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 7 host(s) in finance, engineering, executive, datacenter."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0877:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 5 host(s) in engineering, finance, corporate, datacenter, executive, dmz."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0878:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 9 host(s) in finance, engineering, executive, dmz, corporate, datacenter."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0879:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 6 host(s) in executive, finance, datacenter, corporate, engineering, dmz."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0880:
+    description: "[HARD] Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in corporate, executive, finance."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0881:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 9 host(s) in corporate, finance, engineering, dmz, executive, datacenter."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0882:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 12 host(s) in finance, executive, datacenter, dmz, engineering, corporate."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0883:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 6 host(s) in dmz, corporate, engineering, datacenter, finance."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0884:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 13 host(s) in dmz, corporate, finance, engineering."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0885:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 10 host(s) in executive, engineering, finance, corporate."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0886:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 10 host(s) in finance, datacenter, corporate, executive."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0887:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 6 host(s) in datacenter, corporate, executive, dmz, finance, engineering."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0888:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 14 host(s) in corporate, executive, engineering, dmz."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0889:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 4 host(s) in datacenter, corporate, engineering, finance, executive."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0890:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 9 host(s) in finance, datacenter, executive, engineering, dmz, corporate."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0891:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 7 host(s) in corporate, finance, dmz, executive, engineering, datacenter."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0892:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 6 host(s) in engineering, datacenter, executive, dmz."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0893:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 8 host(s) in datacenter, finance, corporate."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0894:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 7 host(s) in executive, dmz, engineering."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0895:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 8 host(s) in engineering, executive, dmz, finance, datacenter, corporate."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0896:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 8 host(s) in finance, corporate, executive, dmz."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0897:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 9 host(s) in executive, dmz, engineering, corporate, datacenter."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0898:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 10 host(s) in dmz, engineering, executive, datacenter, finance, corporate."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0899:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 10 host(s) in finance, engineering, datacenter."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0900:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 11 host(s) in finance, dmz, engineering, datacenter."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0901:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 9 host(s) in engineering, finance, corporate, dmz, datacenter, executive."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0902:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 8 host(s) in executive, dmz, finance."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0903:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in dmz, engineering, executive, corporate, finance, datacenter."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0904:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 7 host(s) in executive, engineering, finance."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0905:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 8 host(s) in finance, engineering, corporate, executive, datacenter, dmz."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0906:
+    description: "[HARD] Webshell, C2 Communication, Privilege Escalation across 5 host(s) in executive, corporate, finance."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0907:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 8 host(s) in corporate, dmz, finance, datacenter."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0908:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 14 host(s) in executive, dmz, engineering, datacenter."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0909:
+    description: "[HARD] Webshell, C2 Communication, Privilege Escalation across 5 host(s) in engineering, executive, corporate."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0910:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 5 host(s) in corporate, datacenter, finance, dmz, executive, engineering."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0911:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in dmz, executive, finance, corporate."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0912:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 12 host(s) in engineering, corporate, executive, datacenter."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0913:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 8 host(s) in dmz, finance, engineering, executive, datacenter, corporate."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0914:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 10 host(s) in corporate, executive, dmz, engineering, datacenter, finance."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0915:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 7 host(s) in engineering, executive, finance."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0916:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 9 host(s) in dmz, executive, datacenter, corporate."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0917:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in dmz, executive, finance, engineering."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0918:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 8 host(s) in executive, engineering, finance, corporate."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0919:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 6 host(s) in datacenter, finance, corporate, engineering, dmz."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0920:
+    description: "[HARD] Data Exfiltration, Insider Threat, Privilege Escalation across 7 host(s) in datacenter, executive, dmz, engineering, corporate."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0921:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 12 host(s) in dmz, executive, datacenter, engineering, corporate."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0922:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in finance, dmz, datacenter, executive, corporate."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0923:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 11 host(s) in dmz, finance, engineering, datacenter, executive, corporate."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0924:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 7 host(s) in corporate, datacenter, finance, dmz, engineering, executive."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0925:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 8 host(s) in engineering, corporate, datacenter, dmz, finance."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0926:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 8 host(s) in executive, dmz, datacenter."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0927:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 6 host(s) in dmz, finance, datacenter, corporate."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0928:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 8 host(s) in executive, datacenter, engineering, dmz, finance."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0929:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 6 host(s) in dmz, corporate, finance, datacenter, executive."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0930:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 9 host(s) in engineering, corporate, dmz."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0931:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 13 host(s) in engineering, finance, datacenter."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0932:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 8 host(s) in engineering, finance, corporate, executive, dmz, datacenter."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0933:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 10 host(s) in engineering, dmz, datacenter."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0934:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in dmz, engineering, corporate, finance, datacenter, executive."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0935:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 10 host(s) in dmz, engineering, datacenter, corporate, executive."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0936:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 10 host(s) in executive, dmz, corporate, engineering, finance."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0937:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 7 host(s) in corporate, executive, engineering, finance, datacenter."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0938:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 7 host(s) in dmz, engineering, corporate, datacenter."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0939:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in corporate, dmz, finance, datacenter, executive."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0940:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 9 host(s) in dmz, executive, engineering, corporate, datacenter."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0941:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 4 host(s) in datacenter, engineering, corporate, executive, finance, dmz."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0942:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 7 host(s) in finance, executive, engineering, dmz."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0943:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 5 host(s) in dmz, corporate, datacenter, executive, finance, engineering."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0944:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 6 host(s) in dmz, corporate, finance, engineering, datacenter, executive."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0945:
+    description: "[HARD] C2 Communication, Phishing, Privilege Escalation across 6 host(s) in finance, corporate, datacenter."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0946:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 9 host(s) in executive, dmz, finance, datacenter, corporate."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0947:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 9 host(s) in executive, corporate, finance, engineering."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0948:
+    description: "[HARD] Data Exfiltration, Insider Threat, Privilege Escalation across 5 host(s) in dmz, corporate, engineering, datacenter, finance."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0949:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 5 host(s) in engineering, executive, corporate, datacenter."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0950:
+    description: "[HARD] Webshell, C2 Communication, Privilege Escalation across 7 host(s) in executive, corporate, dmz, finance, datacenter."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0951:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 9 host(s) in datacenter, finance, dmz, executive, engineering, corporate."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0952:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 11 host(s) in executive, engineering, dmz, corporate, datacenter, finance."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0953:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 4 host(s) in executive, finance, datacenter, corporate, engineering."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0954:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 7 host(s) in finance, corporate, dmz, engineering, executive, datacenter."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0955:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 10 host(s) in corporate, finance, datacenter, dmz, engineering, executive."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0956:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 5 host(s) in executive, engineering, corporate, datacenter, dmz, finance."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0957:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 8 host(s) in finance, dmz, executive."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0958:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 11 host(s) in datacenter, finance, dmz, corporate."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0959:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 7 host(s) in corporate, finance, executive, dmz, datacenter."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0960:
+    description: "[HARD] Lateral Movement, Credential Theft, Cryptomining, Phishing across 9 host(s) in corporate, engineering, dmz, executive, datacenter."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0961:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 6 host(s) in corporate, executive, engineering, datacenter, dmz, finance."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0962:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 7 host(s) in executive, dmz, finance, corporate, datacenter."
+    max_steps: 35
+    difficulty: hard
+
+  gen_0963:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in executive, dmz, engineering, finance."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0964:
+    description: "[HARD] Lateral Movement, Credential Theft, Phishing across 7 host(s) in dmz, executive, corporate, engineering, finance."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0965:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 13 host(s) in corporate, finance, executive."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0966:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 9 host(s) in corporate, finance, engineering."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0967:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 6 host(s) in dmz, finance, corporate."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0968:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 10 host(s) in executive, dmz, engineering, finance, datacenter."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0969:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 12 host(s) in dmz, corporate, engineering."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0970:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Botnet, Privilege Escalation across 8 host(s) in corporate, executive, dmz, datacenter."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0971:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 9 host(s) in engineering, executive, corporate."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0972:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 6 host(s) in engineering, finance, executive, corporate, datacenter."
+    max_steps: 33
+    difficulty: hard
+
+  gen_0973:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 10 host(s) in dmz, finance, executive, datacenter, engineering."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0974:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 11 host(s) in datacenter, finance, engineering, dmz."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0975:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 14 host(s) in finance, datacenter, engineering."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0976:
+    description: "[HARD] Data Exfiltration, Insider Threat, Privilege Escalation across 6 host(s) in engineering, dmz, corporate, executive, datacenter."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0977:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 6 host(s) in dmz, finance, datacenter, engineering, executive, corporate."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0978:
+    description: "[HARD] Credential Theft, Lateral Movement, Supply Chain, C2 Communication across 6 host(s) in datacenter, executive, corporate, engineering."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0979:
+    description: "[HARD] Botnet, Lateral Movement, Ransomware, Privilege Escalation across 6 host(s) in dmz, corporate, executive, engineering, finance, datacenter."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0980:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 7 host(s) in dmz, engineering, finance."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0981:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 13 host(s) in finance, corporate, dmz, executive, datacenter, engineering."
+    max_steps: 31
+    difficulty: hard
+
+  gen_0982:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 8 host(s) in corporate, engineering, datacenter, finance, dmz."
+    max_steps: 26
+    difficulty: hard
+
+  gen_0983:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 10 host(s) in dmz, engineering, finance."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0984:
+    description: "[HARD] Webshell, C2 Communication, Lateral Movement, Privilege Escalation across 8 host(s) in corporate, dmz, finance."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0985:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 6 host(s) in engineering, dmz, executive."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0986:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 8 host(s) in finance, engineering, corporate."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0987:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 8 host(s) in engineering, finance, dmz, datacenter, executive."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0988:
+    description: "[HARD] Data Exfiltration, C2 Communication, Phishing, Privilege Escalation across 9 host(s) in dmz, datacenter, executive, engineering."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0989:
+    description: "[HARD] Data Exfiltration, Lateral Movement, Webshell, C2 Communication, Privilege Escalation across 8 host(s) in executive, datacenter, finance, corporate, dmz, engineering."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0990:
+    description: "[HARD] Lateral Movement, Supply Chain, C2 Communication across 4 host(s) in datacenter, finance, corporate, engineering, executive, dmz."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0991:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 8 host(s) in executive, finance, datacenter."
+    max_steps: 30
+    difficulty: hard
+
+  gen_0992:
+    description: "[HARD] Botnet, Lateral Movement, Privilege Escalation across 4 host(s) in executive, finance, corporate, engineering, datacenter, dmz."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0993:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 7 host(s) in datacenter, corporate, dmz."
+    max_steps: 28
+    difficulty: hard
+
+  gen_0994:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 12 host(s) in engineering, executive, datacenter, corporate."
+    max_steps: 32
+    difficulty: hard
+
+  gen_0995:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 7 host(s) in engineering, corporate, executive."
+    max_steps: 29
+    difficulty: hard
+
+  gen_0996:
+    description: "[HARD] Ransomware, Phishing, Data Exfiltration, C2 Communication, Privilege Escalation across 10 host(s) in engineering, executive, dmz."
+    max_steps: 34
+    difficulty: hard
+
+  gen_0997:
+    description: "[HARD] Webshell, C2 Communication, Privilege Escalation across 5 host(s) in corporate, datacenter, executive, finance, engineering, dmz."
+    max_steps: 25
+    difficulty: hard
+
+  gen_0998:
+    description: "[HARD] Ransomware, Data Exfiltration, Lateral Movement, Credential Theft, Supply Chain, C2 Communication across 10 host(s) in dmz, datacenter, corporate, executive, engineering."
+    max_steps: 27
+    difficulty: hard
+
+  gen_0999:
+    description: "[HARD] Phishing, Lateral Movement, Cryptomining, Credential Theft, Botnet across 10 host(s) in dmz, executive, engineering, finance, corporate."
+    max_steps: 29
+    difficulty: hard
+
+  gen_1000:
+    description: "[HARD] C2 Communication, Data Exfiltration, Insider Threat, Privilege Escalation across 7 host(s) in corporate, datacenter, dmz, engineering, executive, finance."
+    max_steps: 29
+    difficulty: hard

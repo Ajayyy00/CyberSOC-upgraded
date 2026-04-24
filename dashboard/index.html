@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberSOC Command Center</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- D3.js v7 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
+  <!-- Chart.js v4 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ==========================================
+       CONNECTION OVERLAY
+  ========================================== -->
+  <div id="connection-overlay" class="overlay">
+    <div class="overlay-content">
+      <div class="overlay-icon">🛡️</div>
+      <h2>CyberSOC Command Center</h2>
+      <div id="connection-status">Connecting to CyberSOC Server...</div>
+      <div class="connection-spinner"></div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+        Server: <span style="font-family:monospace;color:var(--accent-cyan)">http://localhost:8000</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       FINAL SCORE OVERLAY
+  ========================================== -->
+  <div id="final-score-overlay" class="overlay hidden">
+    <div class="final-score-content">
+      <div class="mission-complete-banner">MISSION COMPLETE</div>
+      <div class="final-score-label">EPISODE FINAL SCORE</div>
+      <div id="final-score-number" class="final-score-number">0.000</div>
+      <div id="final-grade-bars" class="final-grade-bars"></div>
+      <div id="final-penalties-bonuses" class="final-penalties-bonuses"></div>
+      <button class="btn btn-primary" onclick="window.dashboard.closeScoreOverlay()">📊 View Full Report</button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       HEADER
+  ========================================== -->
+  <header class="header">
+    <div class="header-left">
+      <span class="shield-icon">🛡️</span>
+      <span class="header-title">CyberSOC Command Center</span>
+    </div>
+
+    <div class="header-center">
+      <div class="phase-indicator" id="phase-indicator">
+        <div class="phase-dot" data-phase="triage">
+          <span class="phase-dot-circle"></span>
+          <span class="phase-label">TRIAGE</span>
+        </div>
+        <div class="phase-connector"></div>
+        <div class="phase-dot" data-phase="investigation">
+          <span class="phase-dot-circle"></span>
+          <span class="phase-label">INVESTIGATE</span>
+        </div>
+        <div class="phase-connector"></div>
+        <div class="phase-dot" data-phase="remediation">
+          <span class="phase-dot-circle"></span>
+          <span class="phase-label">REMEDIATE</span>
+        </div>
+        <div class="phase-connector"></div>
+        <div class="phase-dot" data-phase="report">
+          <span class="phase-dot-circle"></span>
+          <span class="phase-label">REPORT</span>
+        </div>
+      </div>
+      <div id="red-team-alert" class="red-team-alert hidden">
+        🔴 RED TEAM ACTIVE — ADAPTIVE PIVOT DETECTED
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="header-stat">
+        <span class="header-stat-label">STEP</span>
+        <span class="header-stat-value mono" id="header-step">0/30</span>
+      </div>
+      <div class="header-stat">
+        <span class="header-stat-label">EPISODE</span>
+        <span class="header-stat-value mono" id="header-episode">—</span>
+      </div>
+      <div class="header-stat">
+        <span class="header-stat-label">ELAPSED</span>
+        <span class="header-stat-value mono" id="header-timer">00:00</span>
+      </div>
+      <div id="difficulty-badge" class="difficulty-badge">—</div>
+    </div>
+  </header>
+
+  <!-- ==========================================
+       MAIN GRID
+  ========================================== -->
+  <main class="main-grid">
+
+    <!-- PANEL 1: Alert Queue -->
+    <section class="panel panel-1" id="panel-alerts">
+      <div class="panel-header">
+        <h2 class="panel-title">🚨 Alert Queue</h2>
+        <span class="badge" id="alert-count-badge">0</span>
+      </div>
+      <div class="panel-body">
+        <div id="alert-list" class="alert-list">
+          <div class="empty-state">Awaiting alerts…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL 2: Live Threat Graph -->
+    <section class="panel panel-2" id="panel-graph">
+      <div class="panel-header" style="flex-wrap:wrap;gap:4px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+          <h2 class="panel-title">🕸️ Live Threat Graph</h2>
+          <div class="graph-legend">
+            <span class="legend-item"><span class="legend-dot host"></span>Host</span>
+            <span class="legend-item"><span class="legend-dot process"></span>Process</span>
+            <span class="legend-item"><span class="legend-dot ioc"></span>IOC</span>
+            <span class="legend-item"><span class="legend-dot alert-node"></span>Alert</span>
+            <span class="legend-item"><span class="legend-dot vuln"></span>Vuln</span>
+          </div>
+        </div>
+        <div id="graph-summary" class="graph-summary"></div>
+      </div>
+      <div class="panel-body graph-body" id="threat-graph-container">
+        <svg id="threat-graph-svg"></svg>
+        <div id="graph-tooltip" class="graph-tooltip hidden"></div>
+      </div>
+    </section>
+
+    <!-- PANEL 3: Agent Action Log -->
+    <section class="panel panel-3" id="panel-actions">
+      <div class="panel-header">
+        <h2 class="panel-title">📋 Agent Actions</h2>
+        <span id="total-reward-badge" class="reward-badge">+0.00</span>
+      </div>
+      <div class="panel-body">
+        <div id="action-log" class="action-log">
+          <div class="empty-state">Awaiting agent actions…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL 4: Network Topology -->
+    <section class="panel panel-4" id="panel-network">
+      <div class="panel-header">
+        <h2 class="panel-title">🌐 Network Topology</h2>
+        <div class="topology-stats">
+          <span class="topo-stat compromised" id="topo-compromised">0 compromised</span>
+          <span class="topo-stat isolated"    id="topo-isolated">0 isolated</span>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div id="network-topology" class="network-topology"></div>
+      </div>
+    </section>
+
+    <!-- PANEL 5: Performance Metrics -->
+    <section class="panel panel-5" id="panel-scores">
+      <div class="panel-header">
+        <h2 class="panel-title">📡 Performance Metrics</h2>
+        <span style="font-size:9px;color:var(--text-muted)">10-dim grading · live estimate</span>
+      </div>
+      <div class="panel-body scores-body">
+        <div class="radar-container">
+          <canvas id="radar-chart"></canvas>
+        </div>
+        <div class="timeline-container">
+          <canvas id="reward-timeline"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL 6: Mission Status -->
+    <section class="panel panel-6" id="panel-mission">
+      <div class="panel-header">
+        <h2 class="panel-title">📊 Mission Status</h2>
+      </div>
+      <div class="panel-body">
+
+        <!-- Containment Progress -->
+        <div class="containment-section">
+          <h3 class="section-label">Containment Progress</h3>
+          <div id="containment-bars" class="containment-bars">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+        <!-- Business Impact -->
+        <div class="impact-section">
+          <h3 class="section-label">Business Impact</h3>
+          <div class="impact-gauge">
+            <div class="impact-gauge-track">
+              <div class="impact-zone-green"></div>
+              <div class="impact-zone-amber"></div>
+              <div class="impact-zone-red"></div>
+              <div class="impact-marker" id="impact-marker"></div>
+            </div>
+            <div class="impact-labels">
+              <span>Minimal</span>
+              <span>Moderate</span>
+              <span>Severe</span>
+            </div>
+            <div class="impact-value-display">
+              <span class="impact-label">Score:</span>
+              <span class="impact-value mono" id="impact-value">0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Threats -->
+        <div class="threats-section">
+          <h3 class="section-label">Active Threats</h3>
+          <div id="active-threats-list" class="active-threats-list">
+            <span class="empty-state" style="padding:6px 0">No threats detected</span>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="control-section">
+          <button class="btn btn-primary" id="btn-start">▶ Start Episode</button>
+          <button class="btn btn-secondary hidden" id="btn-pause">⏸ Pause</button>
+          <button class="btn btn-secondary hidden" id="btn-next">⏭ Step</button>
+          <button class="btn btn-secondary hidden" id="btn-reset">↺ Reset</button>
+          <div class="task-selector">
+            <label for="task-select">Task:</label>
+            <select id="task-select" class="task-select">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard" selected>Hard</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main><!-- /main-grid -->
+
+  <!-- Scripts (order matters) -->
+  <script src="js/animations.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/graphs.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
