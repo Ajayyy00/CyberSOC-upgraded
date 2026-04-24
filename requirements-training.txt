@@ -1,0 +1,30 @@
+# CyberSOC GRPO Training Dependencies
+# Install before running training/train_grpo.py
+#
+# On HuggingFace compute (A10G/A100 with CUDA 12.1):
+#   pip install -r requirements-training.txt
+
+# Unsloth — efficient LoRA + quantization (must be first)
+unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git
+
+# TRL — GRPO trainer
+trl>=0.12.0
+
+# HuggingFace stack
+transformers>=4.45.0
+accelerate>=0.34.0
+peft>=0.13.0
+datasets>=2.21.0
+huggingface_hub>=0.25.0
+
+# Quantization
+bitsandbytes>=0.43.0
+
+# Environment server dependencies (already installed if running from MetaRound2)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.9.0
+requests>=2.31.0
+
+# Logging
+tensorboard>=2.17.0
