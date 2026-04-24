@@ -1,3 +1,11 @@
+---
+title: CyberSOC Upgraded RLVR
+emoji: 🛡️
+colorFrom: red
+colorTo: purple
+sdk: docker
+pinned: false
+---
 # CyberSOC: Complete Project Review
 
 ## 1. Project Overview — RLVR Positioning
