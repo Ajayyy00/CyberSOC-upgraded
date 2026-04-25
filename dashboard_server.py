@@ -74,6 +74,10 @@ app.add_middleware(
 
 # ── Core API Server Only ──────────────────────────────────────────
 
+@app.get("/")
+def read_root():
+    return {"status": "CyberSOC API is running! Use /reset and /step for OpenEnv, or connect via WebSocket."}
+
 
 # ── Multi-tenant session store ────────────────────────────────────────────────
 try:

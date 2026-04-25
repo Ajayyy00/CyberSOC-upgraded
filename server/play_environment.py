@@ -522,6 +522,10 @@ class CyberSOCEnvironment(Environment):
         # fsp_mode=False (backward compat): auto-apply Red PassTurn so
         # callers that only drive Blue see step_count increment as before.
         if not self._fsp_mode:
+            # Embedded Red dynamics: execute neural or deterministic policy.
+            # Only fires when a policy is wired (training) or adaptive=True (SFT).
+            if self._neural_red_policy is not None or self._adaptive:
+                self._apply_red_team_dynamics(typed_action.type, target)
             self._state.step_count += 1
             self._state.active_turn = "blue"
             # Timeout check (done after Red's "auto turn")
@@ -1734,17 +1738,86 @@ class CyberSOCEnvironment(Environment):
                 pass
 
     def _apply_red_team_dynamics(self, action_type: str, target: str) -> None:
-        """Log a Red-side observation record (imitation data for offline SFT).
+        """Execute embedded Red dynamics in non-FSP mode.
 
-        In FSP mode the Red LLM acts via explicit RedActionWrapper steps, so
-        this method only records observations rather than executing any attack.
+        When neural_red_policy is callable: invoke it with the current red
+        observation, route the returned action through the Red handlers, and
+        log the (obs → action) pair for offline SFT.
+
+        When neural_red_policy is None (adaptive=True path): apply the
+        deterministic fallback policy and log the pair.
         """
         red_obs = self._generate_red_observation()
-        self._log_red_decision(
-            red_obs,
-            {"policy": "fsp_turn_engine", "action_type": "noop",
-             "blue_action": action_type, "blue_target": target},
-        )
+
+        if callable(self._neural_red_policy):
+            try:
+                action_dict = self._neural_red_policy(red_obs)
+                if not isinstance(action_dict, dict):
+                    action_dict = {"type": "pass_turn"}
+            except Exception:
+                action_dict = {"type": "pass_turn"}
+
+            atype = action_dict.get("type", "pass_turn")
+            if atype == "lateral_pivot":
+                src = action_dict.get("source_host", "")
+                dst = action_dict.get("target_host", "")
+                if src and dst:
+                    self._handle_lateral_pivot(
+                        LateralPivot(type="lateral_pivot", source_host=src, target_host=dst)
+                    )
+            elif atype == "deploy_payload":
+                h = action_dict.get("hostname", "")
+                pl = action_dict.get("payload_type", "ransomware")
+                if h:
+                    self._handle_deploy_payload(
+                        DeployPayload(type="deploy_payload", hostname=h, payload_type=pl)
+                    )
+            elif atype == "evade_detection":
+                h = action_dict.get("hostname", "")
+                tech = action_dict.get("technique", "migrate_pid")
+                if h:
+                    self._handle_evade_detection(
+                        EvadeDetection(type="evade_detection", hostname=h, technique=tech)
+                    )
+            # pass_turn → no graph mutation needed
+
+            self._log_red_decision(red_obs, action_dict)
+        else:
+            # Deterministic fallback for imitation warm-start (adaptive=True path)
+            det_action = self._deterministic_red_policy(action_type, target, red_obs)
+            if det_action.get("type") == "lateral_pivot":
+                self._handle_lateral_pivot(
+                    LateralPivot(
+                        type="lateral_pivot",
+                        source_host=det_action["source_host"],
+                        target_host=det_action["target_host"],
+                    )
+                )
+            self._log_red_decision(red_obs, det_action)
+
+    def _deterministic_red_policy(
+        self, blue_action: str, blue_target: str, red_obs: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Rule-based Red policy for SFT imitation warm-start data collection.
+
+        Pivots from a compromised host to a healthy neighbour whenever Blue
+        just killed a process, isolated a segment, or blocked an IOC (i.e.
+        Blue is actively containing). Otherwise passes to stay stealthy.
+        """
+        if blue_action in ("kill_process", "isolate_segment", "block_ioc"):
+            compromised = red_obs.get("compromised_hosts", [])
+            src = compromised[0] if compromised else (blue_target or None)
+            if src is not None and src in self._host_index:
+                dst = next(
+                    (
+                        h for h, hd in self._host_index.items()
+                        if hd.get("status") not in ("compromised", "isolated") and h != src
+                    ),
+                    None,
+                )
+                if dst:
+                    return {"type": "lateral_pivot", "source_host": src, "target_host": dst}
+        return {"type": "pass_turn"}
 
     def export_red_team_decisions(self) -> List[Dict[str, Any]]:
         """Return a copy of recorded red-team decisions for offline SFT."""
