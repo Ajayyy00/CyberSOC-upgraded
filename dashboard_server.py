@@ -72,23 +72,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Static dashboard at /dashboard/ ──────────────────────────────────────────
-dashboard_dir = os.path.join(ROOT, "dashboard")
-_STATIC_OK = False
-if os.path.isdir(dashboard_dir):
-    try:
-        from fastapi.staticfiles import StaticFiles
-        app.mount("/dashboard", StaticFiles(directory=dashboard_dir, html=True), name="dashboard")
-        _STATIC_OK = True
-    except ImportError:
-        print("[WARN] aiofiles not installed — static serving disabled. Run: pip install aiofiles")
-else:
-    print(f"[WARN] Dashboard directory not found: {dashboard_dir}")
-
-
-@app.get("/")
-def root_redirect():
-    return RedirectResponse(url="/dashboard/")
+# ── Core API Server Only ──────────────────────────────────────────
 
 
 # ── Multi-tenant session store ────────────────────────────────────────────────
