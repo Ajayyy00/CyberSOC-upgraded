@@ -485,7 +485,7 @@ class CyberSOCEnvironment(Environment):
         if not self._state.is_done:
             impact_rate = self._task_def.get("impact_per_step", 0.02)
             active_ratio = len(self._state.active_threats) / max(
-                1, len(self._task_def["attack_chain"])
+                1, len(self._task_def.get("attack_chain", []))
             )
             self._state.business_impact = min(
                 1.0, self._state.business_impact + impact_rate * active_ratio
