@@ -370,11 +370,11 @@ class ThreatGraphViz {
   update(graphData) {
     if (!this._initialized) return;
 
-    const nodes = graphData.nodes;
-    const links = graphData.links.map(l => ({
+    const nodes = graphData?.nodes || [];
+    const links = (graphData?.links || []).map(l => ({
       ...l,
-      source: l.source.id || l.source,
-      target: l.target.id || l.target,
+      source: l.source?.id ?? l.source,
+      target: l.target?.id ?? l.target,
     }));
 
     this._nodeData = nodes;
@@ -423,7 +423,7 @@ class ThreatGraphViz {
       .attr('filter', d => this._nodeFilter(d));
 
     nodeSel.exit().transition().duration(300)
-      .attr('transform', d => `translate(${d.x},${d.y}) scale(0)`)
+      .attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0}) scale(0)`)
       .remove();
 
     // Update labels
@@ -464,8 +464,8 @@ class ThreatGraphViz {
   _tick() {
     this.linkGroup.selectAll('.graph-link')
       .attr('d', d => {
-        const sx = d.source.x || 0, sy = d.source.y || 0;
-        const tx = d.target.x || 0, ty = d.target.y || 0;
+        const sx = d.source?.x ?? 0, sy = d.source?.y ?? 0;
+        const tx = d.target?.x ?? 0, ty = d.target?.y ?? 0;
         const dx = tx - sx, dy = ty - sy;
         const len = Math.sqrt(dx * dx + dy * dy) || 1;
         // Perpendicular offset — bigger curve for pivot edges
@@ -476,11 +476,11 @@ class ThreatGraphViz {
       });
 
     this.nodeGroup.selectAll('.graph-node')
-      .attr('transform', d => `translate(${d.x || 0},${d.y || 0})`);
+      .attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`);
 
     this.labelGroup.selectAll('.node-label')
-      .attr('x', d => d.x || 0)
-      .attr('y', d => d.y || 0);
+      .attr('x', d => d.x ?? 0)
+      .attr('y', d => d.y ?? 0);
   }
 
   _nodeRadius(d) {
@@ -569,8 +569,8 @@ class ThreatGraphViz {
       html += `<div class="graph-tooltip-row"><span class="graph-tooltip-key">Host:</span><span class="graph-tooltip-value">${d.sourceHost || '—'}</span></div>`;
       if (d.isPivot) html += `<div style="color:#ef4444;margin-top:4px;font-size:10px;">⚡ LATERAL PIVOT</div>`;
     } else if (d.nodeType === 'vulnerability') {
-      html += `<div class="graph-tooltip-row"><span class="graph-tooltip-key">CVSS:</span><span class="graph-tooltip-value">${d.cvssScore}</span></div>`;
-      html += `<div class="graph-tooltip-row"><span class="graph-tooltip-key">Exploitability:</span><span class="graph-tooltip-value">${d.exploitability}</span></div>`;
+      html += `<div class="graph-tooltip-row"><span class="graph-tooltip-key">CVSS:</span><span class="graph-tooltip-value">${d.cvssScore ?? '—'}</span></div>`;
+      html += `<div class="graph-tooltip-row"><span class="graph-tooltip-key">Exploitability:</span><span class="graph-tooltip-value">${d.exploitability ?? '—'}</span></div>`;
     }
 
     tt.classed('hidden', false)
@@ -638,8 +638,8 @@ class ThreatGraphViz {
       const src = pivotLink.source;
       const tgt = pivotLink.target;
       if (!src || !tgt) { timer.stop(); dot.remove(); return; }
-      const sx = src.x || 0, sy = src.y || 0;
-      const tx = tgt.x || 0, ty = tgt.y || 0;
+      const sx = src.x ?? 0, sy = src.y ?? 0;
+      const tx = tgt.x ?? 0, ty = tgt.y ?? 0;
       const x = sx + (tx - sx) * progress;
       const y = sy + (ty - sy) * progress;
       dot.attr('cx', x).attr('cy', y).attr('opacity', Math.sin(progress * Math.PI) * 0.9 + 0.1);
@@ -863,10 +863,10 @@ class RewardTimeline {
 
   addPoint(step, cumulativeReward, actionType) {
     if (!this.chart) return;
+    const reward = cumulativeReward ?? 0;
     this.chart.data.labels.push(`${step}`);
-    this.chart.data.datasets[0].data.push(parseFloat(cumulativeReward.toFixed(3)));
-    // Color negative points red
-    const colors = this.chart.data.datasets[0].data.map(v => v < 0 ? '#ef4444' : '#10b981');
+    this.chart.data.datasets[0].data.push(parseFloat(reward.toFixed(3)));
+    const colors = this.chart.data.datasets[0].data.map(v => (v ?? 0) < 0 ? '#ef4444' : '#10b981');
     this.chart.data.datasets[0].pointBackgroundColor = colors;
     this.chart.update('none');
   }

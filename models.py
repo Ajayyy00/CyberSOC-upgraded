@@ -323,17 +323,26 @@ class ScanHostVulnerabilities(Action):
     hostname: str = Field(..., description="Target hostname for vulnerability scan")
 
 
-class TriggerPlaybook(Action):
-    """Trigger a SOAR playbook against a target host."""
-    type: Literal["trigger_playbook"] = Field(default="trigger_playbook")
-    playbook_name: Literal[
-        "ransomware_containment",
-        "c2_disruption",
-        "lateral_movement_lockdown",
-        "phishing_response",
-        "data_exfil_stop",
-    ] = Field(..., description="Name of the SOAR playbook to trigger")
-    target: str = Field(..., description="Target hostname for playbook execution")
+class TerminatePID(Action):
+    """Terminate a process by PID on a host."""
+    type: Literal["terminate_pid"] = Field(default="terminate_pid")
+    hostname: str = Field(..., description="Host where the PID is running")
+    pid: str = Field(..., description="Target process PID")
+
+
+class CreateFirewallRule(Action):
+    """Create a host-level firewall rule for a target IP."""
+    type: Literal["create_firewall_rule"] = Field(default="create_firewall_rule")
+    hostname: str = Field(..., description="Host where firewall rule is applied")
+    target_ip: str = Field(..., description="Target IP for the rule")
+    action: Literal["drop", "allow"] = Field(..., description="Firewall action to apply")
+
+
+class QuarantineFile(Action):
+    """Quarantine a suspicious file on a host."""
+    type: Literal["quarantine_file"] = Field(default="quarantine_file")
+    hostname: str = Field(..., description="Host where file is located")
+    file_path: str = Field(..., description="File path to quarantine")
 
 
 # Discriminated union of all SOC actions
@@ -348,7 +357,9 @@ SOCAction = Annotated[
         CorrelateAlerts,
         EnrichIOC,
         ScanHostVulnerabilities,
-        TriggerPlaybook,
+        TerminatePID,
+        CreateFirewallRule,
+        QuarantineFile,
     ],
     Field(discriminator="type"),
 ]
@@ -381,7 +392,9 @@ class SOCActionWrapper(Action):
             "correlate_alerts": CorrelateAlerts,
             "enrich_ioc": EnrichIOC,
             "scan_host_vulnerabilities": ScanHostVulnerabilities,
-            "trigger_playbook": TriggerPlaybook,
+            "terminate_pid": TerminatePID,
+            "create_firewall_rule": CreateFirewallRule,
+            "quarantine_file": QuarantineFile,
         }
         cls = action_map.get(data["type"])
         if cls is None:
@@ -421,7 +434,6 @@ class SOCState(State):
     enriched_iocs: List[str] = Field(default_factory=list, description="IOCs that have been threat-intel enriched")
     scanned_hosts: List[str] = Field(default_factory=list, description="Hosts that had vulnerability scans")
     correlated_alert_pairs: List[Any] = Field(default_factory=list, description="Pairs/groups of alert IDs correlated together")
-    triggered_playbooks: List[str] = Field(default_factory=list, description="SOAR playbooks that were triggered")
     live_requirements: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Mutable copy of containment_requirements (for adaptive grading).",

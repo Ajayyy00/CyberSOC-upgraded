@@ -20,7 +20,7 @@ from __future__ import annotations
 import copy
 import random
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
 from openenv.core.env_server.interfaces import Environment
@@ -44,7 +44,9 @@ try:
         CorrelateAlerts,
         EnrichIOC,
         ScanHostVulnerabilities,
-        TriggerPlaybook,
+        TerminatePID,
+        CreateFirewallRule,
+        QuarantineFile,
     )
 except ImportError:
     from models import (
@@ -64,7 +66,9 @@ except ImportError:
         CorrelateAlerts,
         EnrichIOC,
         ScanHostVulnerabilities,
-        TriggerPlaybook,
+        TerminatePID,
+        CreateFirewallRule,
+        QuarantineFile,
     )
 
 from .tasks import get_task, build_network
@@ -78,9 +82,6 @@ from .threat_graph import (
     AlertNode,
     Edge,
 )
-from .soar_playbooks import PLAYBOOKS, check_prerequisites
-
-
 class ActionMiddleware:
     """Pre-flight validation for SOC actions.
 
@@ -143,10 +144,18 @@ class CyberSOCEnvironment(Environment):
 
     SUPPORTS_CONCURRENT_SESSIONS: bool = True
 
-    def __init__(self, adaptive: bool = False):
+    def __init__(
+        self,
+        adaptive: bool = False,
+        neural_red_policy: Optional[Any] = None,
+        red_team_logger: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ):
         """Initialize the environment (actual state set in reset)."""
         super().__init__()
         self._adaptive = adaptive
+        self._neural_red_policy = neural_red_policy
+        self._red_team_logger = red_team_logger
+        self._red_team_decisions: List[Dict[str, Any]] = []
         self._live_requirements: Dict[str, Any] = {}
         self._threat_graph = None  # will be initialized on reset()
         self._state = SOCState(episode_id=str(uuid4()), step_count=0)
@@ -159,6 +168,9 @@ class CyberSOCEnvironment(Environment):
         self._middleware = ActionMiddleware()
         self._rng = random.Random(0)  # overwritten in reset()
         self._pending_followup: Dict[str, bool] = {}  # hostname -> responded_to
+        self._disruption_cost: float = 0.0  # accumulates per clean host/subnet isolated
+        self._discovered_iocs: set = set()  # IOCs revealed via run_forensics or enrich_ioc
+        self._quarantined_files: set[tuple[str, str]] = set()
 
     def _reset_rubric(self):
         """Initialize live containment requirements for dynamic grading in adaptive mode."""
@@ -248,6 +260,10 @@ class CyberSOCEnvironment(Environment):
         self._fired_step_rewards: set = set()
         self._step_reward_total: float = 0.0
         self._pending_followup: Dict[str, bool] = {}
+        self._disruption_cost = 0.0
+        self._discovered_iocs: set = set()
+        self._quarantined_files: set[tuple[str, str]] = set()
+        self._red_team_decisions = []
 
         # Initialize threat graph from task definition
         self._threat_graph = ThreatGraph()
@@ -399,11 +415,12 @@ class CyberSOCEnvironment(Environment):
             self._last_obs_extras.update(result)
             reward = 0.05 if "error" not in result else -0.05
             result_description = result.get("description", "scan_host_vulnerabilities")
-        elif isinstance(typed_action, TriggerPlaybook):
-            result = self._handle_trigger_playbook(typed_action)
-            self._last_obs_extras.update(result)
-            reward = 0.10 if "error" not in result else -0.05
-            result_description = result.get("description", "trigger_playbook")
+        elif isinstance(typed_action, TerminatePID):
+            reward, result_description = self._handle_terminate_pid(typed_action)
+        elif isinstance(typed_action, CreateFirewallRule):
+            reward, result_description = self._handle_create_firewall_rule(typed_action)
+        elif isinstance(typed_action, QuarantineFile):
+            reward, result_description = self._handle_quarantine_file(typed_action)
 
         # Step reward (idempotent per triple)
         target = self._get_action_target(typed_action)
@@ -421,8 +438,8 @@ class CyberSOCEnvironment(Environment):
             if last_three[0] == last_three[1] == last_three[2]:
                 reward -= 0.05  # stall penalty
 
-        # Adaptive adversary reaction
-        self._adversary_react(action_type=typed_action.type, target=target)
+        # Adaptive adversary reaction (deterministic by default, optional neural override)
+        self._apply_red_team_dynamics(action_type=typed_action.type, target=target)
 
         # Business impact grows each step (attacker progresses)
         if not self._state.is_done:
@@ -520,6 +537,18 @@ class CyberSOCEnvironment(Environment):
                 self._threat_graph.hosts[target_host].status = "isolated"
             if target_host in self._pending_followup:
                 self._pending_followup[target_host] = True
+            # Penalise isolating a clean (non-compromised) host — business disruption
+            compromised_host_set = {
+                h for threat in self._task_def["attack_chain"]
+                for h in threat.get("compromised_hosts", [])
+            }
+            if target_host not in compromised_host_set:
+                self._disruption_cost += 0.35
+                self._state.business_impact = min(1.0, self._state.business_impact + 0.10)
+                return -0.35, (
+                    f"Isolated clean host '{target_host}' — unjustified business disruption "
+                    f"(cumulative cost={self._disruption_cost:.2f})"
+                )
             return 0.10, f"Isolated single host '{target_host}'"
 
         subnet = action.subnet
@@ -530,15 +559,31 @@ class CyberSOCEnvironment(Environment):
         if subnet in self._state.isolated_subnets:
             return -0.02, f"Subnet '{subnet}' is already isolated"
 
-        # Isolate all hosts in the subnet
+        # Build compromised host set for disruption tracking
+        compromised_host_set = {
+            h for threat in self._task_def["attack_chain"]
+            for h in threat.get("compromised_hosts", [])
+        }
+
+        # Isolate all hosts in the subnet; count clean hosts for disruption cost
+        clean_isolated_count = 0
         for host in self._network[subnet]:
             host["status"] = "isolated"
             if self._threat_graph is not None and host["hostname"] in self._threat_graph.hosts:
                 self._threat_graph.hosts[host["hostname"]].status = "isolated"
             if host["hostname"] in self._pending_followup:
                 self._pending_followup[host["hostname"]] = True
+            if host["hostname"] not in compromised_host_set:
+                clean_isolated_count += 1
 
         self._state.isolated_subnets.append(subnet)
+
+        # Accumulate disruption cost for each clean host swept up in the isolation
+        if clean_isolated_count > 0:
+            self._disruption_cost += 0.25 * clean_isolated_count
+            self._state.business_impact = min(
+                1.0, self._state.business_impact + 0.05 * clean_isolated_count
+            )
 
         # Check if this contains any active threats
         reward = 0.0
@@ -552,32 +597,54 @@ class CyberSOCEnvironment(Environment):
                         break
 
         if threats_contained:
-            reward = 0.15 * len(threats_contained)  # Good: containing lateral movement
+            # Reduced reward — isolation is a blunt instrument; prefer kill_process / block_ioc
+            reward = 0.07 * len(threats_contained)
             for tid in threats_contained:
                 if tid not in self._state.contained_threats:
                     self._state.contained_threats.append(tid)
                 if tid in self._state.active_threats:
                     self._state.active_threats.remove(tid)
 
-        # Check if this is an unnecessary isolation (business downtime)
+        # Heavy per-clean-host penalty to deter blunt-force isolation spam
+        if clean_isolated_count > 0:
+            reward -= 0.25 * clean_isolated_count
+
+        # Additional penalty for explicitly prohibited isolation
         must_not_isolate = self._task_def["containment_requirements"].get("must_not_isolate", [])
         if subnet in must_not_isolate:
-            reward -= 0.10  # Penalty: unnecessary downtime
+            reward -= 0.10
             self._state.business_impact = min(1.0, self._state.business_impact + 0.08)
 
-        return reward, f"Isolated subnet '{subnet}'. Threats contained: {threats_contained}"
+        return reward, (
+            f"Isolated subnet '{subnet}'. Threats contained: {threats_contained}. "
+            f"Clean hosts disrupted: {clean_isolated_count} "
+            f"(cumulative cost={self._disruption_cost:.2f})"
+        )
 
     def _handle_block_ioc(self, action: BlockIOC) -> tuple[float, str]:
-        """Block an IOC at the perimeter."""
+        """Block an IOC at the perimeter.
+
+        Requires prior discovery via run_forensics or enrich_ioc; blind blocks
+        are recorded but yield 0 reward to prevent reward hacking.
+        """
         ioc = action.ioc_value
         self._last_forensics = None
 
         if ioc in self._state.blocked_iocs:
             return -0.02, f"IOC '{ioc}' is already blocked"
 
+        # Prerequisite gate: IOC must have been discovered via run_forensics or enrich_ioc
+        if ioc not in self._discovered_iocs:
+            self._state.blocked_iocs.append(ioc)  # record the block, but no reward
+            return 0.0, (
+                f"IOC '{ioc}' blocked without prior investigation — 0 reward "
+                "(run_forensics or enrich_ioc required to unlock reward)"
+            )
+
         self._state.blocked_iocs.append(ioc)
 
-        # Mark any forensics-confirmed host as responded-to if this IOC belongs to its threat chain
+        # Mark forensics-confirmed hosts as responded-to — only valid for discovered IOCs,
+        # ensuring _pending_followup accurately reflects investigated-then-actioned flow
         for hostname, responded in list(self._pending_followup.items()):
             if responded:
                 continue
@@ -593,7 +660,7 @@ class CyberSOCEnvironment(Environment):
                         self._pending_followup[hostname] = True
                         break
 
-        # Check if this IOC is relevant to any active threat
+        # Boosted rewards: surgical strikes are heavily preferred over blunt isolation
         reward = 0.0
         relevant = False
         for threat in self._task_def["attack_chain"]:
@@ -604,11 +671,10 @@ class CyberSOCEnvironment(Environment):
             )
             if ioc in all_iocs:
                 relevant = True
-                # Extra reward for blocking C2 server IPs
                 if ioc in threat.get("c2_servers", []):
-                    reward += 0.15  # High value: cutting C2
+                    reward += 0.30  # High value: severing C2 command channel
                 else:
-                    reward += 0.10  # Good: blocking relevant IOC
+                    reward += 0.20  # Good: blocking an investigated IOC
                 break
 
         if not relevant:
@@ -664,6 +730,16 @@ class CyberSOCEnvironment(Environment):
             if is_compromised:
                 reward = 0.10  # Good: found evidence
                 self._pending_followup.setdefault(hostname, False)  # needs response action
+                # Reveal all IOCs tied to this host's threat chain so block_ioc can earn reward
+                for threat in self._task_def["attack_chain"]:
+                    if hostname in threat.get("compromised_hosts", []):
+                        for ioc in (
+                            threat["iocs"].get("hashes", [])
+                            + threat["iocs"].get("ips", [])
+                            + threat["iocs"].get("domains", [])
+                            + threat.get("c2_servers", [])
+                        ):
+                            self._discovered_iocs.add(ioc)
             else:
                 reward = 0.02  # Cleared a host (some value)
             self._state.forensics_run.append(hostname)
@@ -721,7 +797,7 @@ class CyberSOCEnvironment(Environment):
         for threat in self._task_def["attack_chain"]:
             if hostname in threat["compromised_hosts"] and process in threat["malicious_processes"]:
                 was_malicious = True
-                reward = 0.15  # Major reward: stopping malicious activity
+                reward = 0.25  # Surgical strike: high reward for targeted process kill
 
                 # Check if all processes for this threat are killed
                 all_killed = True
@@ -739,7 +815,7 @@ class CyberSOCEnvironment(Environment):
                     self._state.active_threats.remove(threat["threat_id"])
                     if threat["threat_id"] not in self._state.contained_threats:
                         self._state.contained_threats.append(threat["threat_id"])
-                    reward += 0.10  # Bonus: fully contained a threat
+                    reward += 0.15  # Bonus: fully contained a threat via surgical action
                 break
 
         if not was_malicious:
@@ -750,6 +826,114 @@ class CyberSOCEnvironment(Environment):
             self._maybe_reinfect(hostname, process)
 
         return reward, f"Killed '{process}' on {hostname}. Malicious: {was_malicious}"
+
+    def _handle_terminate_pid(self, action: TerminatePID) -> tuple[float, str]:
+        """Terminate a process by PID. PID is mapped to process name in this simulation."""
+        hostname = action.hostname
+        pid = action.pid
+        self._last_forensics = None
+
+        if hostname not in self._host_index:
+            return -0.05, f"Host '{hostname}' not found"
+
+        host = self._host_index[hostname]
+        if host["status"] == "isolated":
+            return -0.02, f"Host '{hostname}' is isolated - cannot interact"
+
+        process_name = pid
+        if ":" in pid:
+            pid_host, _, pid_proc = pid.partition(":")
+            if pid_host == hostname and pid_proc:
+                process_name = pid_proc
+
+        if process_name not in host["running_processes"]:
+            return -0.03, f"PID '{pid}' is not running on {hostname}"
+
+        host["running_processes"].remove(process_name)
+        self._state.killed_processes.append({"hostname": hostname, "process": process_name, "pid": pid})
+        if hostname in self._pending_followup:
+            self._pending_followup[hostname] = True
+
+        was_malicious = False
+        reward = 0.0
+        for threat in self._task_def["attack_chain"]:
+            if hostname in threat["compromised_hosts"] and process_name in threat["malicious_processes"]:
+                was_malicious = True
+                reward = 0.24
+                all_killed = True
+                for th_host in threat["compromised_hosts"]:
+                    for th_proc in threat["malicious_processes"]:
+                        if th_host in self._host_index and th_proc in self._host_index[th_host]["running_processes"]:
+                            all_killed = False
+                            break
+                if all_killed and threat["threat_id"] in self._state.active_threats:
+                    self._state.active_threats.remove(threat["threat_id"])
+                    if threat["threat_id"] not in self._state.contained_threats:
+                        self._state.contained_threats.append(threat["threat_id"])
+                    reward += 0.12
+                break
+
+        if not was_malicious:
+            reward = -0.10
+            self._state.business_impact = min(1.0, self._state.business_impact + 0.04)
+            return reward, f"Terminated benign PID '{pid}' on {hostname} - business disruption"
+
+        self._maybe_reinfect(hostname, process_name)
+        return reward, f"Terminated PID '{pid}' on {hostname}. Malicious: True"
+
+    def _handle_create_firewall_rule(self, action: CreateFirewallRule) -> tuple[float, str]:
+        """Create firewall rule; drop blocks target IP as IOC, allow is neutral."""
+        hostname = action.hostname
+        target_ip = action.target_ip
+
+        if hostname not in self._host_index:
+            return -0.05, f"Host '{hostname}' not found"
+
+        if action.action == "drop":
+            if target_ip in self._state.blocked_iocs:
+                return -0.01, f"Firewall drop rule already exists for {target_ip}"
+            self._state.blocked_iocs.append(target_ip)
+            return 0.08, f"Created firewall DROP rule on {hostname} for {target_ip}"
+
+        return 0.0, f"Created firewall ALLOW rule on {hostname} for {target_ip}"
+
+    def _handle_quarantine_file(self, action: QuarantineFile) -> tuple[float, str]:
+        """Quarantine suspicious files; requires terminating associated malicious PID first."""
+        hostname = action.hostname
+        file_path = action.file_path
+
+        if hostname not in self._host_index:
+            return -0.05, f"Host '{hostname}' not found"
+
+        file_key = (hostname, file_path)
+        if file_key in self._quarantined_files:
+            return -0.01, f"File '{file_path}' already quarantined on {hostname}"
+
+        associated_processes: List[str] = []
+        lowered = file_path.lower()
+        for threat in self._task_def.get("attack_chain", []):
+            if hostname not in threat.get("compromised_hosts", []):
+                continue
+            for proc in threat.get("malicious_processes", []):
+                expected_suffix = f"\\{proc}.dat".lower()
+                if lowered.endswith(expected_suffix):
+                    associated_processes.append(proc)
+
+        if not associated_processes:
+            self._quarantined_files.add(file_key)
+            return -0.02, f"Quarantined untracked file '{file_path}' on {hostname}"
+
+        host = self._host_index[hostname]
+        locked = any(proc in host["running_processes"] for proc in associated_processes)
+        if locked:
+            self._state.business_impact = min(1.0, self._state.business_impact + 0.01)
+            return -0.04, (
+                f"Quarantine failed: file '{file_path}' is locked. "
+                "Terminate associated PID first."
+            )
+
+        self._quarantined_files.add(file_key)
+        return 0.10, f"Quarantined file '{file_path}' on {hostname}"
 
     def _handle_submit_plan(self, action: SubmitContainmentPlan) -> tuple[float, str]:
         """Submit the final containment plan."""
@@ -769,6 +953,7 @@ class CyberSOCEnvironment(Environment):
             graph=self._threat_graph,
             task_def=self._task_def,
             state=self._state,
+            disruption_cost=self._disruption_cost,
         )
         final_score = grade_result["final_score"]
 
@@ -862,6 +1047,9 @@ class CyberSOCEnvironment(Environment):
         if action.ioc_value not in self._state.enriched_iocs:
             self._state.enriched_iocs.append(action.ioc_value)
 
+        # Mark IOC as discovered — future block_ioc on it will receive full reward
+        self._discovered_iocs.add(action.ioc_value)
+
         return {
             "ioc_enrichment": data,
             "description": f"Enriched IOC {action.ioc_value}: actor={data.get('threat_actor')}",
@@ -907,28 +1095,6 @@ class CyberSOCEnvironment(Environment):
         return {
             "vulnerability_results": vuln_results,
             "description": f"Scanned {hostname}: found {len(vuln_results)} CVEs",
-        }
-
-    def _handle_trigger_playbook(self, action: TriggerPlaybook) -> dict:
-        """Trigger a SOAR playbook against a target host."""
-        ok, reason = check_prerequisites(
-            action.playbook_name, action.target, self._state, self._threat_graph
-        )
-        if not ok:
-            return {"error": reason,
-                    "description": f"trigger_playbook failed: {reason}"}
-
-        sub_actions = PLAYBOOKS[action.playbook_name]["sub_actions"]
-        if action.playbook_name not in self._state.triggered_playbooks:
-            self._state.triggered_playbooks.append(action.playbook_name)
-
-        return {
-            "playbook_result": {
-                "playbook": action.playbook_name,
-                "sub_actions": sub_actions,
-                "status": "executed",
-            },
-            "description": f"Executed playbook '{action.playbook_name}' on {action.target}",
         }
 
     # ===========================================================================
@@ -1087,7 +1253,7 @@ class CyberSOCEnvironment(Environment):
     def _get_current_phase(self) -> str:
         """Derive episode phase from the action history in the timeline."""
         action_types = {t["action_type"] for t in self._state.timeline}
-        if any(t in action_types for t in ["kill_process", "block_ioc", "isolate_segment", "trigger_playbook"]):
+        if any(t in action_types for t in ["kill_process", "block_ioc", "isolate_segment", "terminate_pid", "create_firewall_rule", "quarantine_file"]):
             return "remediation"
         if any(t in action_types for t in ["run_forensics", "enrich_ioc", "scan_host_vulnerabilities", "query_host"]):
             return "investigation"
@@ -1146,6 +1312,7 @@ class CyberSOCEnvironment(Environment):
                 graph=self._threat_graph,
                 task_def=self._task_def,
                 state=self._state,
+                disruption_cost=self._disruption_cost,
             )
             final_score_val = round(computed["final_score"], 4)
             grade_breakdown_val = computed["breakdown"]
@@ -1178,9 +1345,9 @@ class CyberSOCEnvironment(Environment):
             correlation_results=extras.get("correlation_results"),
             ioc_enrichment=extras.get("ioc_enrichment"),
             vulnerability_results=extras.get("vulnerability_results"),
-            playbook_result=extras.get("playbook_result"),
+            playbook_result=None,
             threat_graph_summary=threat_graph_summary,
-            available_playbooks=list(PLAYBOOKS.keys()),
+            available_playbooks=[],
             reward_dimensions=reward_dimensions,
         )
 
@@ -1204,13 +1371,120 @@ class CyberSOCEnvironment(Environment):
             return action.ioc_value
         elif isinstance(action, ScanHostVulnerabilities):
             return action.hostname
-        elif isinstance(action, TriggerPlaybook):
-            return f"{action.playbook_name}@{action.target}"
+        elif isinstance(action, TerminatePID):
+            return f"{action.hostname}/{action.pid}"
+        elif isinstance(action, CreateFirewallRule):
+            return f"{action.hostname}:{action.action}:{action.target_ip}"
+        elif isinstance(action, QuarantineFile):
+            return f"{action.hostname}:{action.file_path}"
         return "unknown"
 
     # ===========================================================================
     # Adaptive Red Team + Step Rewards (Task 10)
     # ===========================================================================
+
+    def _build_red_observation(self, action_type: str, target: str) -> Dict[str, Any]:
+        """Compact red-side view used for imitation logs and neural policies."""
+        return {
+            "episode_id": self._state.episode_id,
+            "task_id": self._state.task_id,
+            "step_count": self._state.step_count,
+            "blue_action_type": action_type,
+            "blue_action_target": target,
+            "active_threats": list(self._state.active_threats),
+            "contained_threats": list(self._state.contained_threats),
+            "business_impact": self._state.business_impact,
+            "adaptive_enabled": self._adaptive,
+        }
+
+    def _log_red_decision(self, observation: Dict[str, Any], action: Dict[str, Any]) -> None:
+        """Record (observation -> action) tuples for red-team imitation warm-start."""
+        record = {"observation": observation, "action": action}
+        self._red_team_decisions.append(record)
+        if self._red_team_logger is not None:
+            try:
+                self._red_team_logger(record)
+            except Exception:
+                # Logging is best effort and should never affect environment execution.
+                pass
+
+    def _apply_red_team_dynamics(self, action_type: str, target: str) -> None:
+        """
+        Route red-team behavior through deterministic logic (default) or neural policy.
+
+        When no neural policy is provided, behavior is unchanged from the legacy
+        deterministic `_adversary_react` implementation.
+        """
+        red_obs = self._build_red_observation(action_type=action_type, target=target)
+
+        if self._neural_red_policy is None:
+            result = self._adversary_react(action_type=action_type, target=target)
+            self._log_red_decision(
+                red_obs,
+                result or {"policy": "deterministic", "action_type": "noop"},
+            )
+            return
+
+        policy_fn = None
+        if callable(self._neural_red_policy):
+            policy_fn = self._neural_red_policy
+        elif hasattr(self._neural_red_policy, "act"):
+            policy_fn = self._neural_red_policy.act
+
+        if policy_fn is None:
+            result = self._adversary_react(action_type=action_type, target=target)
+            self._log_red_decision(
+                red_obs,
+                result or {"policy": "deterministic_fallback", "action_type": "noop"},
+            )
+            return
+
+        try:
+            proposed = policy_fn(red_obs)
+        except Exception as exc:
+            result = self._adversary_react(action_type=action_type, target=target)
+            self._log_red_decision(
+                red_obs,
+                {
+                    "policy": "neural_fallback",
+                    "action_type": "noop",
+                    "error": f"{type(exc).__name__}: {exc}",
+                },
+            )
+            if result is not None:
+                self._log_red_decision(red_obs, result)
+            return
+
+        if not isinstance(proposed, dict):
+            self._log_red_decision(
+                red_obs,
+                {"policy": "neural_invalid", "action_type": "noop"},
+            )
+            return
+
+        red_action_type = str(proposed.get("action_type", "noop"))
+        if red_action_type == "lateral_pivot":
+            source_host = str(proposed.get("source_host") or target)
+            outcome = self._execute_lateral_pivot(source_host=source_host)
+            self._log_red_decision(
+                red_obs,
+                {
+                    "policy": "neural",
+                    "action_type": "lateral_pivot",
+                    "source_host": source_host,
+                    "executed": bool(outcome and outcome.get("executed")),
+                },
+            )
+            return
+
+        self._log_red_decision(
+            red_obs,
+            {"policy": "neural", "action_type": red_action_type},
+        )
+
+    def export_red_team_decisions(self) -> List[Dict[str, Any]]:
+        """Return a copy of recorded red-team decisions for offline SFT."""
+        return list(self._red_team_decisions)
 
     STEP_REWARDS: Dict[Any, float] = {
         ("investigation", "run_forensics"):              +0.10,
@@ -1303,10 +1577,10 @@ class CyberSOCEnvironment(Environment):
             "is_acknowledged": False,
         })
 
-    def _adversary_react(self, action_type: str, target: str) -> None:
+    def _adversary_react(self, action_type: str, target: str) -> Optional[Dict[str, Any]]:
         """Adaptive red team response — fires after each step when adaptive=True."""
         if not self._adaptive:
-            return
+            return None
 
         difficulty = self._task_def.get("difficulty") or getattr(self._state, "task_id", "easy")
         # Reduced medium base probability for better GRPO credit assignment
@@ -1319,9 +1593,11 @@ class CyberSOCEnvironment(Environment):
         # Trigger on isolate_segment OR kill_process (extended pivot trigger)
         if action_type in ("isolate_segment", "kill_process") and pivot_probability > 0:
             if self._rng.random() < pivot_probability:
-                self._execute_lateral_pivot(source_host=target)
+                source_host = target.split("/")[0] if "/" in target else target
+                return self._execute_lateral_pivot(source_host=source_host)
+        return {"policy": "deterministic", "action_type": "noop", "executed": False}
 
-    def _execute_lateral_pivot(self, source_host: str) -> None:
+    def _execute_lateral_pivot(self, source_host: str) -> Optional[Dict[str, Any]]:
         """Copy-not-move lateral pivot: spread to an adjacent healthy host.
 
         Rubric is capped at MAX_RUBRIC_ITEMS to prevent competent agents from
@@ -1330,7 +1606,7 @@ class CyberSOCEnvironment(Environment):
         MAX_RUBRIC_ITEMS = 12
         graph = self._threat_graph
         if graph is None:
-            return
+            return None
 
         # Rubric cap: stop pivoting once live_requirements is full
         if self._live_requirements:
@@ -1339,7 +1615,7 @@ class CyberSOCEnvironment(Environment):
                 + len(self._live_requirements.get("must_isolate", []))
             )
             if current_items >= MAX_RUBRIC_ITEMS:
-                return
+                return {"policy": "deterministic", "action_type": "lateral_pivot", "executed": False}
 
         adjacent_hosts = [
             e.target_id for e in graph.edges
@@ -1361,7 +1637,7 @@ class CyberSOCEnvironment(Environment):
                     and h not in graph.hosts
                 ]
             if not healthy_hosts:
-                return
+                return {"policy": "deterministic", "action_type": "lateral_pivot", "executed": False}
             adjacent_hosts = healthy_hosts
 
         dest_host = self._rng.choice(adjacent_hosts)
@@ -1378,7 +1654,7 @@ class CyberSOCEnvironment(Environment):
 
         source_processes = [p for p in graph.processes.values() if p.hostname == source_host]
         if not source_processes:
-            return
+            return {"policy": "deterministic", "action_type": "lateral_pivot", "executed": False}
         original = source_processes[0]
 
         new_pid = str(uuid.uuid4())[:8]  # uuid imported at module level
@@ -1411,6 +1687,14 @@ class CyberSOCEnvironment(Environment):
             source_host=dest_host,
         )
         graph.add_alert(new_alert)
+        return {
+            "policy": "deterministic",
+            "action_type": "lateral_pivot",
+            "executed": True,
+            "source_host": source_host,
+            "dest_host": dest_host,
+            "alert_id": new_alert.alert_id,
+        }
 
     @property
     def state(self) -> SOCState:

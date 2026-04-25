@@ -2,15 +2,126 @@
    CyberSOC Dashboard — Main Application Controller
    ============================================================ */
 
+// ============================================================
+// StateStore — single source of truth for all dashboard state
+// ============================================================
+class StateStore {
+  constructor() {
+    this._state = StateStore._emptyState();
+    this._subscribers = new Map();
+  }
+
+  static _emptyState() {
+    return {
+      episodeActive: false,
+      episodeId: null,
+      taskId: null,
+      stepCount: 0,
+      maxSteps: 30,
+      totalReward: 0,
+      reward: 0,
+      done: false,
+      alerts: [],
+      topology: null,
+      timeline: [],
+      activeThreats: [],
+      businessImpactScore: 0,
+      liveScores: {
+        threat_containment: 0, ioc_blocking: 0, forensic_investigation: 0,
+        siem_correlation: 0, threat_intel_usage: 0, vuln_root_cause: 0,
+        business_impact: 0, step_efficiency: 0, plan_coverage: 0, plan_evidence_quality: 0,
+      },
+      threatGraph: { nodes: [], links: [] },
+      gradeBreakdown: null,
+      finalScore: null,
+      hostForensics: null,
+      iocEnrichment: null,
+      vulnerabilityResults: null,
+      playbookResult: null,
+      correlationResults: null,
+      threatGraphSummary: null,
+    };
+  }
+
+  get(key) { return this._state[key]; }
+
+  subscribe(event, callback) {
+    if (!this._subscribers.has(event)) this._subscribers.set(event, []);
+    this._subscribers.get(event).push(callback);
+    return () => {
+      const subs = this._subscribers.get(event);
+      if (subs) { const i = subs.indexOf(callback); if (i >= 0) subs.splice(i, 1); }
+    };
+  }
+
+  emit(event, data) {
+    (this._subscribers.get(event) || []).forEach(cb => {
+      try { cb(data); } catch (e) { console.error(`[StateStore] "${event}" handler error:`, e); }
+    });
+  }
+
+  // Called by the API after every reset() or step() response.
+  // Merges the parsed observation into state and fires events.
+  applyObservation(obs, action) {
+    if (!obs) return;
+    const wasActive = this._state.episodeActive;
+    Object.assign(this._state, {
+      episodeActive: true,
+      episodeId:           obs.episode_id          ?? this._state.episodeId,
+      taskId:              obs.task_id              ?? this._state.taskId,
+      stepCount:           obs.step_count           ?? this._state.stepCount,
+      maxSteps:            obs.max_steps            ?? this._state.maxSteps,
+      totalReward:         obs.total_reward         ?? this._state.totalReward,
+      reward:              obs.reward               ?? 0,
+      done:                obs.done                 ?? false,
+      alerts:              obs.alert_queue          ?? this._state.alerts,
+      topology:            obs.network_topology     ?? this._state.topology,
+      timeline:            obs.timeline             ?? this._state.timeline,
+      activeThreats:       obs.active_threats       ?? this._state.activeThreats,
+      businessImpactScore: obs.business_impact_score ?? this._state.businessImpactScore,
+      gradeBreakdown:      obs.grade_breakdown      ?? this._state.gradeBreakdown,
+      finalScore:          obs.final_score          ?? this._state.finalScore,
+      hostForensics:       obs.host_forensics       ?? null,
+      iocEnrichment:       obs.ioc_enrichment       ?? null,
+      vulnerabilityResults: obs.vulnerability_results ?? null,
+      playbookResult:      obs.playbook_result      ?? null,
+      correlationResults:  obs.correlation_results  ?? null,
+      threatGraphSummary:  obs.threat_graph_summary ?? this._state.threatGraphSummary,
+    });
+    if (!wasActive) this.emit('episode:started', { obs, action });
+    this.emit('episode:step', { obs, action });
+    if (this._state.done) this.emit('episode:ended', { obs, action });
+  }
+
+  updateLiveScores(scores) {
+    this._state.liveScores = { ...scores };
+    this.emit('state:scores', scores);
+  }
+
+  updateThreatGraph(graphData) {
+    this._state.threatGraph = graphData;
+    this.emit('state:threatGraph', graphData);
+  }
+
+  reset() {
+    this._state = StateStore._emptyState();
+    this.emit('episode:reset', {});
+  }
+}
+
+
+// ============================================================
+// CyberSOCDashboard — orchestrates episode flow and UI bindings
+// ============================================================
 class CyberSOCDashboard {
   constructor() {
     this.api = API;
+    this.store = new StateStore();
     this.threatGraph = new ClientThreatGraph();
     this.graphViz = new ThreatGraphViz('threat-graph-container');
     this.radarChart = new RadarChart('radar-chart');
     this.rewardTimeline = new RewardTimeline('reward-timeline');
 
-    this.currentObs = null;
     this.demoActions = [];
     this.currentStepIndex = 0;
     this.autoPlayTimer = null;
@@ -20,19 +131,6 @@ class CyberSOCDashboard {
     this.episodeRunning = false;
     this.prevAlertIds = new Set();
     this.currentAction = null;
-
-    // Live score estimates — all start at 0 (nothing scored until an episode runs)
-    this.liveScores = {
-      threat_containment: 0, ioc_blocking: 0, forensic_investigation: 0,
-      siem_correlation: 0, threat_intel_usage: 0, vuln_root_cause: 0,
-      business_impact: 0, step_efficiency: 0, plan_coverage: 0, plan_evidence_quality: 0,
-    };
-    this.containmentState = {
-      processed_killed: 0, processes_total: 0,
-      iocs_blocked: 0, iocs_total: 0,
-      hosts_investigated: 0, hosts_total: 0,
-      playbooks_triggered: 0, playbooks_total: 2,
-    };
   }
 
   async init() {
@@ -40,9 +138,21 @@ class CyberSOCDashboard {
     this.graphViz.init();
     this.radarChart.init();
     this.rewardTimeline.init();
+    this.api.setStore(this.store);
+    this._subscribeToStore();
     this._bindButtons();
     this._showConnectionOverlay('Connecting to CyberSOC Server...');
     await this._waitForServer();
+  }
+
+  // Wire UI components to store events — the only place DOM updates are triggered.
+  _subscribeToStore() {
+    this.store.subscribe('episode:started', ({ obs }) => this._onEpisodeStarted(obs));
+    this.store.subscribe('episode:step',    ({ obs, action }) => this._onStep(obs, action));
+    this.store.subscribe('episode:ended',   ({ obs }) => this._handleEpisodeComplete(obs));
+    this.store.subscribe('episode:reset',   () => this._resetUI());
+    this.store.subscribe('state:scores',    scores    => this.radarChart.update(scores));
+    this.store.subscribe('state:threatGraph', graphData => this.graphViz.update(graphData));
   }
 
   async _waitForServer() {
@@ -60,7 +170,7 @@ class CyberSOCDashboard {
         setTimeout(check, 2000);
       } else {
         this._showConnectionOverlay('⚠️ Server not available. Start with: uvicorn dashboard_server:app --port 8000');
-        document.getElementById('btn-start').disabled = false; // Allow manual start attempt
+        document.getElementById('btn-start').disabled = false;
       }
     };
     await check();
@@ -69,7 +179,7 @@ class CyberSOCDashboard {
   _bindButtons() {
     document.getElementById('btn-start').addEventListener('click', () => this._onStartClick());
     document.getElementById('btn-pause').addEventListener('click', () => this._onPauseClick());
-    document.getElementById('btn-next').addEventListener('click', () => this._onNextClick());
+    document.getElementById('btn-next').addEventListener('click',  () => this._onNextClick());
     document.getElementById('btn-reset').addEventListener('click', () => this._onResetClick());
   }
 
@@ -101,16 +211,14 @@ class CyberSOCDashboard {
     this.isPaused = false;
     this.episodeRunning = false;
     if (this.autoPlayTimer) { clearTimeout(this.autoPlayTimer); this.autoPlayTimer = null; }
-    if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
+    if (this.timerInterval)  { clearInterval(this.timerInterval); this.timerInterval = null; }
 
-    // Reset UI
-    document.getElementById('btn-start').classList.remove('hidden');
     document.getElementById('btn-pause').classList.add('hidden');
     document.getElementById('btn-next').classList.add('hidden');
     document.getElementById('btn-reset').classList.add('hidden');
-    document.getElementById('task-select').disabled = false;
 
-    this._resetUI();
+    // Resets data model → emits episode:reset → _resetUI() subscriber fires
+    this.store.reset();
   }
 
   // ============================================================
@@ -126,38 +234,22 @@ class CyberSOCDashboard {
 
     AnimationUtils.showNotification(`🚀 Starting ${taskId.toUpperCase()} episode...`, 'blue', 2000);
 
+    // Reset alert tracking before api.reset() so _onEpisodeStarted starts clean
+    this.prevAlertIds = new Set();
+
     try {
+      // api.reset() calls store.applyObservation() internally, which fires
+      // episode:started → _onEpisodeStarted() and episode:step → _onStep(obs, null)
       const obs = await this.api.reset(taskId);
-      this.currentObs = obs;
+
       this.episodeRunning = true;
       this.currentStepIndex = 0;
       this.episodeStartTime = Date.now();
-      this.prevAlertIds = new Set();
 
-      // Start timer
       if (this.timerInterval) clearInterval(this.timerInterval);
       this.timerInterval = setInterval(() => this._updateTimer(), 1000);
 
-      // Build demo action sequence from initial observation
       this.demoActions = this.buildDemoActions(obs);
-
-      // Initial UI update (staggered alerts)
-      this._resetUIForEpisode();
-      this._updateHeader(obs);
-      this._updatePhase(0, obs.max_steps);
-      await this._populateInitialAlerts(obs.alert_queue);
-      this._updateNetworkTopology(obs.network_topology);
-      this._updateBusinessImpact(obs.business_impact_score);
-      this._updateActiveThreats(obs.active_threats);
-      this._updateContainmentProgress(obs, taskId);
-
-      // Populate threat graph from initial observation
-      this.threatGraph = new ClientThreatGraph();
-      this.threatGraph.updateFromObservation(obs, null);
-      obs.alert_queue.forEach(a => this.prevAlertIds.add(a.alert_id));
-      this.graphViz.update(this.threatGraph.getGraphData());
-
-      // Start auto-play
       this._scheduleNextStep(2500);
 
     } catch (err) {
@@ -171,25 +263,118 @@ class CyberSOCDashboard {
     }
   }
 
+  // ============================================================
+  // Store event handlers — the reactive UI layer
+  // ============================================================
+
+  // Fired once when a new episode observation arrives (wasActive was false).
+  _onEpisodeStarted(obs) {
+    this._resetUIForEpisode();
+
+    // Zero out scores — scores must not carry over from a previous episode
+    this.store.updateLiveScores({
+      threat_containment: 0, ioc_blocking: 0, forensic_investigation: 0,
+      siem_correlation: 0, threat_intel_usage: 0, vuln_root_cause: 0,
+      business_impact: 0, step_efficiency: 0, plan_coverage: 0, plan_evidence_quality: 0,
+    });
+
+    this._updateHeader(obs);
+    this._updatePhase(0, obs.max_steps);
+    this._populateInitialAlerts(obs.alert_queue || []); // async fire-and-forget
+    this._updateNetworkTopology(obs.network_topology);
+    this._updateBusinessImpact(obs.business_impact_score ?? 0);
+    this._updateActiveThreats(obs.active_threats);
+    this._updateContainmentProgress(obs, obs.task_id);
+
+    // Seed the client-side threat graph from the initial observation
+    this.threatGraph = new ClientThreatGraph();
+    this.threatGraph.updateFromObservation(obs, null);
+    this.store.updateThreatGraph(this.threatGraph.getGraphData());
+
+    (obs.alert_queue || []).forEach(a => this.prevAlertIds.add(a.alert_id));
+  }
+
+  // Fired for every step response (including the initial reset).
+  // When action is null this is the initial observation — _onEpisodeStarted already handled it.
+  _onStep(obs, action) {
+    if (!action) return;
+
+    this._updateHeader(obs);
+    this._updatePhase(obs.step_count, obs.max_steps);
+    this._updateActionLog(obs.timeline, action, obs);
+    this._updateNetworkTopology(obs.network_topology);
+    this._updateBusinessImpact(obs.business_impact_score ?? 0);
+    this._updateActiveThreats(obs.active_threats);
+    this._updateContainmentProgress(obs, obs.task_id);
+    this._updateRewardBadge(obs.total_reward ?? 0);
+
+    // Detect pivot alerts that just appeared
+    const newPivots = [];
+    (obs.alert_queue || []).forEach(alert => {
+      if (alert.alert_id.startsWith('PIVOT-') && !this.prevAlertIds.has(alert.alert_id)) {
+        newPivots.push(alert);
+      }
+    });
+
+    this._updateAlertQueue(obs.alert_queue || [], newPivots.length > 0); // async fire-and-forget
+
+    // Update threat graph state and push to graphViz via store event
+    this.threatGraph.updateFromObservation(obs, action);
+    this.store.updateThreatGraph(this.threatGraph.getGraphData());
+
+    // Per-action graph animations
+    if (action.type === 'run_forensics' && obs.host_forensics) {
+      this.graphViz.flashNode(obs.host_forensics.hostname, obs.host_forensics.is_compromised ? 'red' : 'green');
+    }
+    if (action.type === 'block_ioc') {
+      this.graphViz.flashNode(action.ioc_value, 'green');
+    }
+    if (action.type === 'kill_process') {
+      const procId = `${action.hostname}:${action.process_name}`;
+      this.graphViz.flashNode(procId, 'green');
+      AnimationUtils.showNotification(`💀 Killed: ${action.process_name} on ${action.hostname}`, 'amber', 2000);
+    }
+
+    // Red team lateral pivot handling
+    if (newPivots.length > 0) {
+      this._handleRedTeamPivot(newPivots[0]);
+      newPivots.forEach(p => {
+        this.prevAlertIds.add(p.alert_id);
+        const pivotLinks = this.threatGraph.links.filter(l => l.edgeType === 'pivoted_from');
+        if (pivotLinks.length > 0) {
+          const pl = pivotLinks[pivotLinks.length - 1];
+          const srcId = pl.source.id || pl.source;
+          const tgtId = pl.target.id || pl.target;
+          this.graphViz.animatePivot(srcId, tgtId);
+        }
+      });
+    }
+
+    if (obs.step_count > 0) {
+      this.rewardTimeline.addPoint(obs.step_count, obs.total_reward ?? 0, action.type);
+    }
+
+    if (obs.threat_graph_summary) this._updateGraphSummary(obs.threat_graph_summary);
+
+    // _updateLiveScores writes back to the store → emits state:scores → radarChart.update()
+    this._updateLiveScores(obs, action);
+
+    (obs.alert_queue || []).forEach(a => this.prevAlertIds.add(a.alert_id));
+  }
+
   buildDemoActions(obs) {
-    // Parse initial observation to get real data
     const alerts = obs.alert_queue || [];
     const alertIds = alerts.map(a => a.alert_id);
     const taskId = obs.task_id;
 
-    // Collect all IOCs from alerts
     const allIocs = [];
     const ipIocs = [];
     const domainIocs = [];
     const hashIocs = [];
     const hostsSeen = new Set();
-    const subnetsSeen = new Set();
 
     alerts.forEach(a => {
-      if (!hostsSeen.has(a.source_host)) {
-        hostsSeen.add(a.source_host);
-      }
-      if (a.subnet) subnetsSeen.add(a.subnet);
+      if (!hostsSeen.has(a.source_host)) hostsSeen.add(a.source_host);
       (a.ioc_indicators || []).forEach(ioc => {
         if (!allIocs.includes(ioc)) {
           allIocs.push(ioc);
@@ -201,65 +386,33 @@ class CyberSOCDashboard {
     });
 
     const hosts = [...hostsSeen];
-    const firstHost = hosts[0] || 'WS-042';
-    const secondHost = hosts[1] || firstHost;
-    const thirdHost = hosts[2] || firstHost;
-    const firstIp = ipIocs[0] || allIocs[0] || '192.168.1.1';
-    const firstDomain = domainIocs[0] || allIocs[1] || firstIp;
-    const firstHash = hashIocs[0] || allIocs[2] || firstIp;
 
-    // Task-specific action sequences using known data
-    if (taskId === 'hard') {
-      return this._hardDemoActions(alertIds, hosts, ipIocs, domainIocs, hashIocs);
-    } else if (taskId === 'medium') {
-      return this._mediumDemoActions(alertIds, hosts, ipIocs, domainIocs, hashIocs);
-    } else {
-      return this._easyDemoActions(alertIds, hosts, ipIocs, domainIocs, hashIocs);
-    }
+    if (taskId === 'hard')   return this._hardDemoActions(alertIds, hosts, ipIocs, domainIocs, hashIocs);
+    if (taskId === 'medium') return this._mediumDemoActions(alertIds, hosts, ipIocs, domainIocs, hashIocs);
+    return this._easyDemoActions(alertIds, hosts, ipIocs, domainIocs, hashIocs);
   }
 
-  _hardDemoActions(alertIds, hosts, ipIocs, domainIocs, hashIocs) {
+  _hardDemoActions(alertIds, _hosts, ipIocs, domainIocs, _hashIocs) {
     return [
-      // TRIAGE: correlate alerts about the C2 activity
       { type: 'correlate_alerts', alert_ids: [alertIds[0] || 'ALERT-H001', alertIds[1] || 'ALERT-H002'] },
-
-      // INVESTIGATION: executive host (entry point)
       { type: 'query_host', hostname: 'EXEC-003' },
       { type: 'run_forensics', hostname: 'EXEC-003' },
-
-      // INVESTIGATION: corporate host with C2 beacon
       { type: 'query_host', hostname: 'WS-088' },
       { type: 'run_forensics', hostname: 'WS-088' },
-
-      // THREAT INTEL: enrich the C2 IP
       { type: 'enrich_ioc', ioc_value: ipIocs[0] || '198.51.100.77', ioc_type: 'ip' },
-
-      // INVESTIGATION: datacenter server (privilege escalation target)
       { type: 'scan_host_vulnerabilities', hostname: 'SRV-002' },
       { type: 'run_forensics', hostname: 'SRV-002' },
-
-      // REMEDIATION: kill C2-related processes
       { type: 'kill_process', hostname: 'EXEC-003', process_name: 'outlook_macro.exe' },
       { type: 'kill_process', hostname: 'EXEC-003', process_name: 'svchost_c2.exe' },
       { type: 'kill_process', hostname: 'WS-088', process_name: 'svchost_c2.exe' },
-
-      // REMEDIATION: block C2 infrastructure
       { type: 'block_ioc', ioc_value: ipIocs[0] || '198.51.100.77', ioc_type: 'ip' },
       { type: 'block_ioc', ioc_value: domainIocs[0] || 'cdn-update.malware-c2.net', ioc_type: 'domain' },
-
-      // REMEDIATION: isolate executive subnet (triggers pivot if adaptive=true)
       { type: 'isolate_segment', subnet: 'executive', reason: 'APT lateral movement detected — executive subnet compromised' },
-
-      // REMEDIATION: SOAR playbook for C2 disruption
       { type: 'trigger_playbook', playbook_name: 'c2_disruption', target: 'EXEC-003' },
-
-      // REMEDIATION: kill exfil and ransomware processes
       { type: 'kill_process', hostname: 'SRV-002', process_name: 'exploit_kernel.exe' },
       { type: 'kill_process', hostname: 'SRV-002', process_name: 'data_pump.exe' },
       { type: 'kill_process', hostname: 'FIN-008', process_name: 'data_pump.exe' },
       { type: 'kill_process', hostname: 'SRV-010', process_name: 'blackcat_ransom.exe' },
-
-      // REPORT: submit comprehensive containment plan
       {
         type: 'submit_containment_plan',
         plan: [
@@ -299,7 +452,7 @@ class CyberSOCDashboard {
     ];
   }
 
-  _mediumDemoActions(alertIds, hosts, ipIocs, domainIocs, hashIocs) {
+  _mediumDemoActions(alertIds, hosts, ipIocs, domainIocs, _hashIocs) {
     return [
       { type: 'correlate_alerts', alert_ids: alertIds.slice(0, 2) },
       { type: 'query_host', hostname: hosts[0] || 'WS-017' },
@@ -325,7 +478,7 @@ class CyberSOCDashboard {
     ];
   }
 
-  _easyDemoActions(alertIds, hosts, ipIocs, domainIocs, hashIocs) {
+  _easyDemoActions(alertIds, hosts, ipIocs, _domainIocs, hashIocs) {
     const host = hosts[0] || 'WS-042';
     const hash = hashIocs[0] || ipIocs[0] || 'e99a18c428cb38d5f260853678922e03';
     return [
@@ -361,7 +514,7 @@ class CyberSOCDashboard {
   }
 
   async _executeNextStep() {
-    if (!this.episodeRunning || this.currentObs?.done) {
+    if (!this.episodeRunning || this.store.get('done')) {
       this.episodeRunning = false;
       return;
     }
@@ -375,105 +528,34 @@ class CyberSOCDashboard {
     this.currentStepIndex++;
 
     try {
+      // api.step() calls store.applyObservation() internally.
+      // episode:step fires synchronously → _onStep() updates UI before we resume here.
       const obs = await this.api.step(action);
-      this.currentObs = obs;
-      await this.updateUI(obs, action);
 
       if (obs.done) {
         this.episodeRunning = false;
-        if (this.timerInterval) clearInterval(this.timerInterval);
-        this._handleEpisodeComplete(obs);
+        if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
+        // episode:ended was already emitted by store → _handleEpisodeComplete() fired
       } else if (!this.isPaused) {
-        // Adjust delay based on action type for dramatic effect
         let delay = 2000;
-        if (action.type === 'isolate_segment') delay = 3000; // Longer for pivot drama
+        if (action.type === 'isolate_segment') delay = 3000;
         if (action.type === 'submit_containment_plan') delay = 500;
         this._scheduleNextStep(delay);
       }
     } catch (err) {
       console.error('Step failed:', err);
       AnimationUtils.showNotification(`❌ Step failed: ${err.message.substring(0, 80)}`, 'red', 4000);
-      // Try to continue on error
       if (!this.isPaused) this._scheduleNextStep(3000);
     }
   }
 
   // ============================================================
-  // UI Updates
+  // Live Score Calculation — writes back through store → radarChart
   // ============================================================
-
-  async updateUI(obs, action) {
-    this._updateHeader(obs);
-    this._updatePhase(obs.step_count, obs.max_steps);
-    this._updateActionLog(obs.timeline, action, obs);
-    this._updateNetworkTopology(obs.network_topology);
-    this._updateBusinessImpact(obs.business_impact_score);
-    this._updateActiveThreats(obs.active_threats);
-    this._updateContainmentProgress(obs, obs.task_id);
-    this._updateRewardBadge(obs.total_reward);
-
-    // Check for new pivot alerts
-    const newPivots = [];
-    (obs.alert_queue || []).forEach(alert => {
-      if (alert.alert_id.startsWith('PIVOT-') && !this.prevAlertIds.has(alert.alert_id)) {
-        newPivots.push(alert);
-      }
-    });
-
-    // Update alert queue (add new alerts with animation)
-    await this._updateAlertQueue(obs.alert_queue, newPivots.length > 0);
-
-    // Update threat graph
-    this.threatGraph.updateFromObservation(obs, action);
-    this.graphViz.update(this.threatGraph.getGraphData());
-
-    // Animate forensics result on graph
-    if (action?.type === 'run_forensics' && obs.host_forensics) {
-      this.graphViz.flashNode(obs.host_forensics.hostname, obs.host_forensics.is_compromised ? 'red' : 'green');
-    }
-    if (action?.type === 'block_ioc') {
-      this.graphViz.flashNode(action.ioc_value, 'green');
-    }
-    if (action?.type === 'kill_process') {
-      const procId = `${action.hostname}:${action.process_name}`;
-      this.graphViz.flashNode(procId, 'green');
-      AnimationUtils.showNotification(`💀 Killed: ${action.process_name} on ${action.hostname}`, 'amber', 2000);
-    }
-
-    // Red Team pivot moment
-    if (newPivots.length > 0) {
-      this._handleRedTeamPivot(newPivots[0]);
-      newPivots.forEach(p => {
-        this.prevAlertIds.add(p.alert_id);
-        // Animate pivot edge in graph
-        const pivotLinks = this.threatGraph.links.filter(l => l.edgeType === 'pivoted_from');
-        if (pivotLinks.length > 0) {
-          const pl = pivotLinks[pivotLinks.length - 1];
-          const srcId = pl.source.id || pl.source;
-          const tgtId = pl.target.id || pl.target;
-          this.graphViz.animatePivot(srcId, tgtId);
-        }
-      });
-    }
-
-    // Update reward timeline chart
-    if (obs.step_count > 0) {
-      this.rewardTimeline.addPoint(obs.step_count, obs.total_reward, action?.type);
-    }
-
-    // Update threat graph summary subtitle
-    if (obs.threat_graph_summary) this._updateGraphSummary(obs.threat_graph_summary);
-
-    // Update live score estimates
-    this._updateLiveScores(obs, action);
-
-    // Sync alert IDs
-    (obs.alert_queue || []).forEach(a => this.prevAlertIds.add(a.alert_id));
-  }
 
   _updateLiveScores(obs, action) {
     if (!action) return;
-    const scores = { ...this.liveScores };
+    const scores = { ...this.store.get('liveScores') };
 
     if (action.type === 'correlate_alerts') scores.siem_correlation = 1.0;
     if (action.type === 'run_forensics') {
@@ -482,7 +564,7 @@ class CyberSOCDashboard {
     if (action.type === 'enrich_ioc') {
       scores.threat_intel_usage = Math.min(1, scores.threat_intel_usage + 0.25);
     }
-    if (action.type === 'scan_host_vulnerabilities' && obs.vulnerability_results?.length > 0) {
+    if (action.type === 'scan_host_vulnerabilities' && (obs.vulnerability_results?.length ?? 0) > 0) {
       scores.vuln_root_cause = 1.0;
     }
     if (action.type === 'block_ioc') {
@@ -496,35 +578,31 @@ class CyberSOCDashboard {
       scores.plan_evidence_quality = 0.85;
     }
 
-    // Business impact inversely related to actual business_impact_score
-    scores.business_impact = Math.max(0, 1.0 - obs.business_impact_score);
-
-    // Step efficiency based on step count vs max
-    const ratio = obs.step_count / (obs.max_steps || 30);
+    scores.business_impact = Math.max(0, 1.0 - (obs.business_impact_score ?? 0));
+    const ratio = (obs.step_count ?? 0) / (obs.max_steps || 30);
     scores.step_efficiency = Math.max(0.3, 1.0 - Math.max(0, ratio - 0.5) * 1.5);
 
-    this.liveScores = scores;
-    this.radarChart.update(scores);
+    // Emits state:scores → radarChart.update() subscriber fires
+    this.store.updateLiveScores(scores);
   }
 
+  // ============================================================
+  // UI Update Helpers
+  // ============================================================
+
   _updateHeader(obs) {
-    const stepEl = document.getElementById('header-step');
+    const stepEl    = document.getElementById('header-step');
     const episodeEl = document.getElementById('header-episode');
     const diffBadge = document.getElementById('difficulty-badge');
 
     if (stepEl) {
       const old = parseInt(stepEl.textContent.split('/')[0]) || 0;
       AnimationUtils.countUpInt(stepEl, old, obs.step_count, 300);
-      // Reformat with max_steps after animation
-      setTimeout(() => {
-        if (stepEl) stepEl.textContent = `${obs.step_count}/${obs.max_steps}`;
-      }, 350);
+      setTimeout(() => { if (stepEl) stepEl.textContent = `${obs.step_count}/${obs.max_steps}`; }, 350);
     }
-
     if (episodeEl && obs.episode_id) {
       episodeEl.textContent = obs.episode_id.substring(0, 8) + '…';
     }
-
     if (diffBadge && obs.task_id) {
       diffBadge.textContent = obs.task_id.toUpperCase();
       diffBadge.className = `difficulty-badge ${obs.task_id}`;
@@ -540,19 +618,17 @@ class CyberSOCDashboard {
     if (el) el.textContent = `${mm}:${ss}`;
   }
 
-  _updatePhase(step, maxSteps) {
-    // Phase progression based on step count and action types
-    const dots = document.querySelectorAll('.phase-dot');
+  _updatePhase(_step, _maxSteps) {
+    const dots       = document.querySelectorAll('.phase-dot');
     const connectors = document.querySelectorAll('.phase-connector');
 
-    // Determine current phase
     let phaseIdx = 0;
     if (this.currentAction) {
       const t = this.currentAction.type;
-      if (['correlate_alerts'].includes(t)) phaseIdx = 0; // TRIAGE
-      else if (['query_host', 'run_forensics', 'enrich_ioc', 'scan_host_vulnerabilities'].includes(t)) phaseIdx = 1; // INVESTIGATION
-      else if (['kill_process', 'block_ioc', 'isolate_segment', 'trigger_playbook'].includes(t)) phaseIdx = 2; // REMEDIATION
-      else if (['submit_containment_plan'].includes(t)) phaseIdx = 3; // REPORT
+      if (['correlate_alerts'].includes(t)) phaseIdx = 0;
+      else if (['query_host', 'run_forensics', 'enrich_ioc', 'scan_host_vulnerabilities'].includes(t)) phaseIdx = 1;
+      else if (['kill_process', 'block_ioc', 'isolate_segment', 'trigger_playbook'].includes(t)) phaseIdx = 2;
+      else if (['submit_containment_plan'].includes(t)) phaseIdx = 3;
     }
 
     dots.forEach((dot, i) => {
@@ -560,39 +636,26 @@ class CyberSOCDashboard {
       if (i < phaseIdx) dot.classList.add('completed');
       else if (i === phaseIdx) dot.classList.add('active');
     });
-
-    connectors.forEach((conn, i) => {
-      conn.classList.toggle('completed', i < phaseIdx);
-    });
+    connectors.forEach((conn, i) => conn.classList.toggle('completed', i < phaseIdx));
   }
 
   async _populateInitialAlerts(alerts) {
     const list = document.getElementById('alert-list');
     if (!list) return;
     list.innerHTML = '';
-
-    // Stagger alert cards sliding in
     for (let i = 0; i < alerts.length; i++) {
       await new Promise(r => setTimeout(r, 180 * i));
       this._addAlertCard(alerts[i], list, false);
     }
-
     this._updateAlertBadge(alerts.length);
   }
 
-  async _updateAlertQueue(alerts, hasPivot = false) {
+  async _updateAlertQueue(alerts, _hasPivot = false) {
     const list = document.getElementById('alert-list');
     if (!list) return;
-
-    // Find new alerts
     const existingIds = new Set([...list.querySelectorAll('.alert-card')].map(c => c.dataset.alertId));
     const newAlerts = alerts.filter(a => !existingIds.has(a.alert_id));
-
-    newAlerts.forEach(alert => {
-      this._addAlertCard(alert, list, alert.alert_id.startsWith('PIVOT-'));
-    });
-
-    // Update resolved state
+    newAlerts.forEach(alert => this._addAlertCard(alert, list, alert.alert_id.startsWith('PIVOT-')));
     const resolvedCount = alerts.filter(a => a.is_acknowledged).length;
     this._updateAlertBadge(alerts.length - resolvedCount);
   }
@@ -603,8 +666,8 @@ class CyberSOCDashboard {
     card.dataset.alertId = alert.alert_id;
 
     const severityClass = `severity-${alert.severity}`;
-    const iocText = (alert.ioc_indicators || []).join(', ');
-    const iocHtml = iocText ? `<div class="alert-iocs">IOCs: ${iocText}</div>` : '';
+    const iocText   = (alert.ioc_indicators || []).join(', ');
+    const iocHtml   = iocText ? `<div class="alert-iocs">IOCs: ${iocText}</div>` : '';
     const pivotBadge = isPivot ? `<span class="pivot-badge">⚡ PIVOT</span>` : '';
     const correlBadge = alert.is_acknowledged ? `<span class="correlated-badge">🔗 CORR</span>` : '';
 
@@ -620,7 +683,6 @@ class CyberSOCDashboard {
         ${pivotBadge}${correlBadge}
       </div>
     `;
-
     card.title = alert.description;
     container.insertBefore(card, container.firstChild);
   }
@@ -630,23 +692,20 @@ class CyberSOCDashboard {
     if (badge) badge.textContent = count;
   }
 
-  _updateActionLog(timeline, lastAction, obs) {
+  _updateActionLog(timeline, _lastAction, obs) {
     const log = document.getElementById('action-log');
     if (!log || !timeline?.length) return;
-
     const lastEntry = timeline[timeline.length - 1];
     if (!lastEntry) return;
 
-    // Remove empty state
     const empty = log.querySelector('.empty-state');
     if (empty) empty.remove();
 
-    const category = this._getActionCategory(lastEntry.action_type);
-    const isPos = lastEntry.reward >= 0;
+    const category   = this._getActionCategory(lastEntry.action_type);
+    const isPos      = lastEntry.reward >= 0;
     const rewardText = `${isPos ? '+' : ''}${lastEntry.reward.toFixed(2)}`;
     const rewardClass = isPos ? 'positive' : 'negative';
-    const icon = this._getActionIcon(lastEntry.action_type);
-
+    const icon       = this._getActionIcon(lastEntry.action_type);
     const detailsHtml = this._buildLogDetails(lastEntry.action_type, obs);
 
     const entry = document.createElement('div');
@@ -661,10 +720,7 @@ class CyberSOCDashboard {
       <div class="log-result">${lastEntry.result.substring(0, 120)}</div>
       ${detailsHtml}
     `;
-
     log.insertBefore(entry, log.firstChild);
-
-    // Update total reward badge
     this._updateRewardBadge(obs?.total_reward ?? 0);
   }
 
@@ -689,13 +745,13 @@ class CyberSOCDashboard {
     if (actionType === 'enrich_ioc' && obs.ioc_enrichment) {
       const e = obs.ioc_enrichment;
       if (e.threat_actor) lines.push(`Actor: <span style="color:var(--accent-red)">${e.threat_actor}</span>`);
-      if (e.reputation !== undefined) lines.push(`Reputation: <span style="color:var(--accent-amber)">${e.reputation}</span>`);
+      if (e.reputation != null) lines.push(`Reputation: <span style="color:var(--accent-amber)">${e.reputation}</span>`);
       if (e.mitre_ttps?.length) lines.push(`TTPs: <span style="color:var(--accent-purple)">${e.mitre_ttps.slice(0, 3).join(' · ')}</span>`);
     }
 
     if (actionType === 'scan_host_vulnerabilities' && obs.vulnerability_results?.length) {
       const vulns = obs.vulnerability_results;
-      const critical = vulns.filter(v => v.cvss_score >= 9).length;
+      const critical = vulns.filter(v => (v.cvss_score ?? 0) >= 9).length;
       const cves = vulns.slice(0, 3).map(v => v.cve_id).join(' · ');
       lines.push(`Found ${vulns.length} CVEs${critical ? ` (<span style="color:var(--accent-red)">${critical} critical</span>)` : ''}`);
       if (cves) lines.push(`<span style="color:var(--accent-amber)">${cves}</span>`);
@@ -716,8 +772,7 @@ class CyberSOCDashboard {
       if (c.threat_chain) lines.push(`Chain: <span style="color:var(--accent-cyan)">${c.threat_chain}</span>`);
     }
 
-    if (!lines.length) return '';
-    return `<div class="log-details">${lines.join('<br>')}</div>`;
+    return lines.length ? `<div class="log-details">${lines.join('<br>')}</div>` : '';
   }
 
   _updateGraphSummary(summary) {
@@ -736,7 +791,7 @@ class CyberSOCDashboard {
 
   _updateNetworkTopology(topology) {
     const container = document.getElementById('network-topology');
-    if (!container) return;
+    if (!container || !topology) return;
 
     const subnetConfig = {
       corporate:   { label: 'Corporate',   color: '#3b82f6' },
@@ -747,7 +802,6 @@ class CyberSOCDashboard {
       executive:   { label: 'Executive',   color: '#ef4444' },
     };
 
-    // Build or update subnet section skeletons
     Object.entries(topology.subnets || {}).forEach(([subnet, count]) => {
       const cfg = subnetConfig[subnet] || { label: subnet, color: '#94a3b8' };
       let section = document.getElementById(`subnet-${subnet}`);
@@ -765,7 +819,6 @@ class CyberSOCDashboard {
         container.appendChild(section);
       }
 
-      // Populate grid with placeholder dots (count-based, no known names yet)
       const grid = document.getElementById(`grid-${subnet}`);
       if (grid && grid.children.length === 0) {
         for (let i = 0; i < count; i++) {
@@ -777,16 +830,13 @@ class CyberSOCDashboard {
       }
     });
 
-    // Overlay known-host statuses from the threat graph onto the dots
-    // Group graph hosts by subnet
-    const subnetHostStatus = {};  // subnet -> [{hostname, status}]
+    const subnetHostStatus = {};
     this.threatGraph.nodes.forEach((node) => {
       if (node.nodeType !== 'host' || !node.subnet) return;
       if (!subnetHostStatus[node.subnet]) subnetHostStatus[node.subnet] = [];
       subnetHostStatus[node.subnet].push({ hostname: node.id, status: node.status || 'online' });
     });
 
-    // For each subnet, update the first N dots with known statuses
     Object.entries(subnetHostStatus).forEach(([subnet, hosts]) => {
       const grid = document.getElementById(`grid-${subnet}`);
       if (!grid) return;
@@ -800,18 +850,16 @@ class CyberSOCDashboard {
       });
     });
 
-    // Update header stats
     const topoStatComp = document.getElementById('topo-compromised');
-    const topoStatIso = document.getElementById('topo-isolated');
-    if (topoStatComp) topoStatComp.textContent = `${topology.compromised_count} compromised`;
-    if (topoStatIso) topoStatIso.textContent = `${topology.isolated_count} isolated`;
+    const topoStatIso  = document.getElementById('topo-isolated');
+    if (topoStatComp) topoStatComp.textContent = `${topology.compromised_count ?? 0} compromised`;
+    if (topoStatIso)  topoStatIso.textContent  = `${topology.isolated_count ?? 0} isolated`;
 
-    // Mark isolated subnets
     Object.keys(topology.subnets || {}).forEach(subnet => {
       const section = document.getElementById(`subnet-${subnet}`);
       if (!section) return;
       const hosts = subnetHostStatus[subnet] || [];
-      const isIsolated = hosts.some(h => h.status === 'isolated');
+      const isIsolated    = hosts.some(h => h.status === 'isolated');
       const hasCompromised = hosts.some(h => h.status === 'compromised');
       section.classList.toggle('isolated', isIsolated);
       section.classList.toggle('has-compromised', hasCompromised && !isIsolated);
@@ -830,17 +878,16 @@ class CyberSOCDashboard {
 
   _updateBusinessImpact(score) {
     const marker = document.getElementById('impact-marker');
-    const value = document.getElementById('impact-value');
-    if (marker) marker.style.left = `${score * 100}%`;
+    const value  = document.getElementById('impact-value');
+    if (marker) marker.style.left = `${(score ?? 0) * 100}%`;
     if (value) {
       const prev = parseFloat(value.textContent) || 0;
-      AnimationUtils.countUp(value, prev, score, 400, 2);
-      value.className = 'impact-value mono' + (score > 0.6 ? ' critical' : score > 0.35 ? ' high' : '');
+      AnimationUtils.countUp(value, prev, score ?? 0, 400, 2);
+      value.className = 'impact-value mono' + ((score ?? 0) > 0.6 ? ' critical' : (score ?? 0) > 0.35 ? ' high' : '');
     }
-
-    if (score > 0.5) {
+    if ((score ?? 0) > 0.5) {
       const impactSection = document.querySelector('.impact-section');
-      if (impactSection) AnimationUtils.pulseGlow(impactSection, score > 0.7 ? 'red' : 'amber', 2);
+      if (impactSection) AnimationUtils.pulseGlow(impactSection, (score ?? 0) > 0.7 ? 'red' : 'amber', 2);
     }
   }
 
@@ -858,15 +905,12 @@ class CyberSOCDashboard {
     const container = document.getElementById('containment-bars');
     if (!container) return;
 
-    // Derive progress from timeline
-    const timeline = obs.timeline || [];
-    const killed = timeline.filter(t => t.action_type === 'kill_process');
-    const blocked = timeline.filter(t => t.action_type === 'block_ioc');
+    const timeline  = obs.timeline || [];
+    const killed    = timeline.filter(t => t.action_type === 'kill_process');
+    const blocked   = timeline.filter(t => t.action_type === 'block_ioc');
     const forensics = timeline.filter(t => t.action_type === 'run_forensics');
     const playbooks = timeline.filter(t => t.action_type === 'trigger_playbook');
-    const correlated = timeline.some(t => t.action_type === 'correlate_alerts');
 
-    // Task-specific totals
     const totals = {
       hard:   { kill: 8, block: 6, forensics: 5, playbooks: 1 },
       medium: { kill: 4, block: 5, forensics: 3, playbooks: 1 },
@@ -875,9 +919,9 @@ class CyberSOCDashboard {
     const t = totals[taskId] || totals.hard;
 
     const bars = [
-      { id: 'bar-kill', label: 'Processes Killed', current: Math.min(killed.length, t.kill), total: t.kill },
-      { id: 'bar-block', label: 'IOCs Blocked', current: Math.min(blocked.length, t.block), total: t.block },
-      { id: 'bar-forensics', label: 'Hosts Investigated', current: Math.min(forensics.length, t.forensics), total: t.forensics },
+      { id: 'bar-kill',      label: 'Processes Killed',    current: Math.min(killed.length,    t.kill),     total: t.kill },
+      { id: 'bar-block',     label: 'IOCs Blocked',        current: Math.min(blocked.length,   t.block),    total: t.block },
+      { id: 'bar-forensics', label: 'Hosts Investigated',  current: Math.min(forensics.length, t.forensics), total: t.forensics },
       { id: 'bar-playbooks', label: 'Playbooks Triggered', current: Math.min(playbooks.length, t.playbooks), total: t.playbooks },
     ];
 
@@ -905,7 +949,6 @@ class CyberSOCDashboard {
 
   _handleRedTeamPivot(pivotAlert) {
     AnimationUtils.triggerRedTeamPivot();
-    // Add the pivot alert to the queue with special styling
     const list = document.getElementById('alert-list');
     if (list) {
       const card = document.createElement('div');
@@ -923,87 +966,33 @@ class CyberSOCDashboard {
       `;
       list.insertBefore(card, list.firstChild);
     }
-    // Recalculate containment (requirements grew)
     AnimationUtils.showNotification('⚡ Red Team lateral pivot! Containment requirements updated.', 'red', 5000);
   }
 
   _handleEpisodeComplete(obs) {
-    if (this.timerInterval) clearInterval(this.timerInterval);
+    if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
     document.getElementById('btn-pause').classList.add('hidden');
     document.getElementById('btn-next').classList.add('hidden');
 
-    // Update phase to REPORT
     this.currentAction = { type: 'submit_containment_plan' };
     this._updatePhase(obs.step_count, obs.max_steps);
 
-    // Update radar with final scores
     if (obs.grade_breakdown) {
-      this.radarChart.update(obs.grade_breakdown);
+      this.store.updateLiveScores(obs.grade_breakdown);
     }
 
-    // Brief delay then show final score overlay
     setTimeout(() => {
       const finalScore = obs.final_score ?? obs.total_reward ?? 0;
-      AnimationUtils.revealFinalScore(
-        finalScore,
-        obs.grade_breakdown,
-        [], // penalties would come from grade_result
-        []  // bonuses
-      );
+      AnimationUtils.revealFinalScore(finalScore, obs.grade_breakdown, [], []);
       AnimationUtils.showNotification(`🏆 Episode complete! Score: ${finalScore.toFixed(3)}`, 'green', 6000);
     }, 1000);
   }
 
   // ============================================================
-  // Helpers
+  // Full UI reset — called via episode:reset store event
   // ============================================================
 
-  _getActionCategory(actionType) {
-    if (['correlate_alerts'].includes(actionType)) return 'triage';
-    if (['query_host', 'run_forensics', 'enrich_ioc', 'scan_host_vulnerabilities'].includes(actionType)) return 'investigation';
-    if (['kill_process', 'block_ioc', 'isolate_segment', 'trigger_playbook'].includes(actionType)) return 'remediation';
-    if (['submit_containment_plan'].includes(actionType)) return 'report';
-    return 'investigation';
-  }
-
-  _getActionIcon(actionType) {
-    const icons = {
-      query_host: '🔍',
-      run_forensics: '🧬',
-      enrich_ioc: '🔎',
-      scan_host_vulnerabilities: '🩺',
-      kill_process: '⚔️',
-      block_ioc: '🚫',
-      isolate_segment: '🔒',
-      trigger_playbook: '▶️',
-      correlate_alerts: '🔗',
-      submit_containment_plan: '📝',
-    };
-    return icons[actionType] || '➤';
-  }
-
-  _showConnectionOverlay(msg) {
-    const overlay = document.getElementById('connection-overlay');
-    const status = document.getElementById('connection-status');
-    if (overlay) overlay.classList.remove('hidden');
-    if (status) status.textContent = msg;
-  }
-
-  _hideConnectionOverlay() {
-    const overlay = document.getElementById('connection-overlay');
-    if (overlay) {
-      overlay.style.transition = 'opacity 0.5s ease';
-      overlay.style.opacity = '0';
-      setTimeout(() => {
-        overlay.classList.add('hidden');
-        overlay.style.opacity = '';
-        overlay.style.transition = '';
-      }, 500);
-    }
-  }
-
   _resetUI() {
-    // Clear all panels to initial state
     document.getElementById('alert-list').innerHTML = '<div class="empty-state">Awaiting alerts...</div>';
     document.getElementById('action-log').innerHTML = '<div class="empty-state">Awaiting agent actions...</div>';
     document.getElementById('active-threats-list').innerHTML = '<span class="empty-state">No threats detected</span>';
@@ -1020,29 +1009,22 @@ class CyberSOCDashboard {
     document.getElementById('difficulty-badge').textContent = '—';
     document.getElementById('difficulty-badge').className = 'difficulty-badge';
 
-    // Reset phase
     document.querySelectorAll('.phase-dot').forEach(d => d.classList.remove('active', 'completed'));
     document.querySelectorAll('.phase-connector').forEach(c => c.classList.remove('completed'));
 
-    // Reset charts — all zeros, no data until episode starts
     if (this.rewardTimeline) this.rewardTimeline.reset();
-    if (this.radarChart) this.radarChart.update({
-      threat_containment: 0, ioc_blocking: 0, forensic_investigation: 0,
-      siem_correlation: 0, threat_intel_usage: 0, vuln_root_cause: 0,
-      business_impact: 0, step_efficiency: 0, plan_coverage: 0, plan_evidence_quality: 0,
-    });
+    // store.reset() already zeroed liveScores; pass them to the chart directly
+    if (this.radarChart) this.radarChart.update(this.store.get('liveScores'));
 
-    // Reset threat graph
     this.threatGraph = new ClientThreatGraph();
-    if (this.graphViz._initialized) {
-      this.graphViz.update({ nodes: [], links: [] });
-    }
+    if (this.graphViz._initialized) this.graphViz.update({ nodes: [], links: [] });
 
-    // Show start button
     document.getElementById('btn-start').classList.remove('hidden');
     document.getElementById('task-select').disabled = false;
   }
 
+  // Clears dynamic panels at the start of a new episode (no chart reset — scores stay zero
+  // until _onEpisodeStarted explicitly zeroes them via the store).
   _resetUIForEpisode() {
     document.getElementById('alert-list').innerHTML = '';
     document.getElementById('action-log').innerHTML = '';
@@ -1050,13 +1032,48 @@ class CyberSOCDashboard {
     document.getElementById('network-topology').innerHTML = '';
     document.getElementById('network-topology').dataset.built = 'false';
     if (this.rewardTimeline) this.rewardTimeline.reset();
-    // Reset live scores to zero — scores only update via real step() responses
-    this.liveScores = {
-      threat_containment: 0, ioc_blocking: 0, forensic_investigation: 0,
-      siem_correlation: 0, threat_intel_usage: 0, vuln_root_cause: 0,
-      business_impact: 0, step_efficiency: 0, plan_coverage: 0, plan_evidence_quality: 0,
+  }
+
+  // ============================================================
+  // Helpers
+  // ============================================================
+
+  _getActionCategory(actionType) {
+    if (['correlate_alerts'].includes(actionType)) return 'triage';
+    if (['query_host', 'run_forensics', 'enrich_ioc', 'scan_host_vulnerabilities'].includes(actionType)) return 'investigation';
+    if (['kill_process', 'block_ioc', 'isolate_segment', 'trigger_playbook'].includes(actionType)) return 'remediation';
+    if (['submit_containment_plan'].includes(actionType)) return 'report';
+    return 'investigation';
+  }
+
+  _getActionIcon(actionType) {
+    const icons = {
+      query_host: '🔍', run_forensics: '🧬', enrich_ioc: '🔎',
+      scan_host_vulnerabilities: '🩺', kill_process: '⚔️', block_ioc: '🚫',
+      isolate_segment: '🔒', trigger_playbook: '▶️', correlate_alerts: '🔗',
+      submit_containment_plan: '📝',
     };
-    if (this.radarChart) this.radarChart.update(this.liveScores);
+    return icons[actionType] || '➤';
+  }
+
+  _showConnectionOverlay(msg) {
+    const overlay = document.getElementById('connection-overlay');
+    const status  = document.getElementById('connection-status');
+    if (overlay) overlay.classList.remove('hidden');
+    if (status)  status.textContent = msg;
+  }
+
+  _hideConnectionOverlay() {
+    const overlay = document.getElementById('connection-overlay');
+    if (overlay) {
+      overlay.style.transition = 'opacity 0.5s ease';
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+        overlay.style.opacity = '';
+        overlay.style.transition = '';
+      }, 500);
+    }
   }
 
   closeScoreOverlay() {

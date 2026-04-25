@@ -50,6 +50,7 @@ def grade_episode(
     graph: "ThreatGraph",
     task_def: Dict[str, Any],
     state,
+    disruption_cost: float = 0.0,
 ) -> Dict[str, Any]:
     """Score the episode across 10 dimensions and return structured output."""
 
@@ -66,7 +67,6 @@ def grade_episode(
     scanned_hosts = list(getattr(state, "scanned_hosts", []) or [])
     enriched_iocs = list(getattr(state, "enriched_iocs", []) or [])
     correlated_pairs = list(getattr(state, "correlated_alert_pairs", []) or [])
-    triggered_playbooks = list(getattr(state, "triggered_playbooks", []) or [])
 
     # ---- 1. threat_containment ----
     if must_kill:
@@ -142,7 +142,8 @@ def grade_episode(
         first_remediation_idx = next(
             (i for i, a in enumerate(episode_actions)
              if a.get("action_type") in {"block_ioc", "kill_process",
-                                          "isolate_segment", "trigger_playbook"}),
+                                         "isolate_segment", "terminate_pid",
+                                         "create_firewall_rule", "quarantine_file"}),
             None,
         )
         first_correlation_idx = next(
@@ -190,69 +191,73 @@ def grade_episode(
             breakdown["vuln_root_cause"] = _clamp(breakdown["vuln_root_cause"] + delta)
 
     # ---- 7. business_impact ----
-    base = 1.0
+    # Driven by disruption_cost accumulated in play_environment: 0.25 per clean host
+    # isolated in a subnet, 0.35 per clean single-host isolation.  A score of 1.0
+    # means zero disruption; each unit of disruption_cost subtracts proportionally.
+    base = max(0.0, 1.0 - disruption_cost)
+    if disruption_cost > 0.0:
+        penalties.append({
+            "type": "business_disruption",
+            "delta": -disruption_cost,
+            "detail": (
+                f"cumulative disruption cost {disruption_cost:.2f} from isolating "
+                "non-compromised hosts/subnets"
+            ),
+        })
+
+    # Additional penalty for explicitly prohibited subnet isolation
     must_not_isolate = requirements.get("must_not_isolate", []) or []
     for s in [s for s in isolated_subnets if s in must_not_isolate]:
-        delta = _capped(-0.10)
+        delta = _capped(-0.15)
         penalties.append({
             "type": "unnecessary_isolation",
             "delta": delta,
-            "detail": f"subnet '{s}' isolated unnecessarily",
+            "detail": f"subnet '{s}' is explicitly prohibited from isolation",
         })
-        base += delta
+        base = max(0.0, base + delta)
 
-    # Per healthy-host isolation (graph view): every isolated host costs -0.10
-    healthy_isolated = sum(1 for h in graph.hosts.values() if h.status == "isolated")
-    for _ in range(healthy_isolated):
-        delta = _capped(-0.10)
-        penalties.append({
-            "type": "healthy_host_isolated",
-            "delta": delta,
-            "detail": "host was isolated (potential downtime)",
-        })
-        base += delta
-
+    # Over-isolation flag: blunt-force approach spanning >20% of known graph hosts
     total_hosts = len(graph.hosts)
     if total_hosts > 0:
-        isolated_count = healthy_isolated
+        isolated_count = sum(1 for h in graph.hosts.values() if h.status == "isolated")
         if isolated_count / total_hosts > 0.20:
-            # Spec specifies -0.30 here; bypass the per-occurrence cap so the
-            # over-isolation flag can dominate as intended.
             delta = -0.30
             penalties.append({
                 "type": "over_isolation",
                 "delta": delta,
-                "detail": ">20% of hosts isolated",
+                "detail": f">20% of hosts isolated ({isolated_count}/{total_hosts})",
             })
-            base += delta
+            base = max(0.0, base + delta)
 
-    breakdown["business_impact"] = max(0.0, base)
+    breakdown["business_impact"] = base
 
     # ---- 8. step_efficiency ----
-    eff_base = 1.0 if triggered_playbooks else 0.5
-    playbook_bonus_total = 0.0
-    for _ in triggered_playbooks:
-        delta = _capped(0.10)
-        bonuses.append({
-            "type": "playbook_triggered",
-            "delta": delta,
-            "detail": "SOAR playbook used",
-        })
-        playbook_bonus_total += delta
-    playbook_bonus_total = min(playbook_bonus_total, 0.30)
-    eff_base += playbook_bonus_total
+    # Reward high threat containment achieved in fewer total steps.
+    steps_used = max(1, len(episode_actions))
+    max_steps = max(1, int(getattr(state, "max_steps", 30) or 30))
+    containment = breakdown.get("threat_containment", 0.0)
+    step_factor = 1.0 - min(1.0, (steps_used - 1) / max_steps)
+    efficiency = containment * step_factor
 
-    steps_used = len(episode_actions)
-    over = max(0, steps_used - 15)
-    if over > 0:
-        delta = _capped(-0.05 * over)
-        penalties.append({
-            "type": "step_overrun",
+    if containment >= 0.8 and steps_used <= max(3, max_steps // 3):
+        delta = _capped(0.08)
+        bonuses.append({
+            "type": "fast_high_containment",
             "delta": delta,
-            "detail": f"used {steps_used} steps, over budget by {over}",
+            "detail": f"high containment ({containment:.2f}) achieved in {steps_used} step(s)",
         })
-        eff_base += delta
-    breakdown["step_efficiency"] = _clamp(eff_base)
+        efficiency += delta
+
+    if containment < 0.4 and steps_used > max_steps // 2:
+        delta = _capped(-0.08)
+        penalties.append({
+            "type": "inefficient_low_containment",
+            "delta": delta,
+            "detail": f"low containment ({containment:.2f}) after {steps_used} step(s)",
+        })
+        efficiency += delta
+
+    breakdown["step_efficiency"] = _clamp(efficiency)
 
     # ---- 9. plan_coverage ----
     if final_plan is None:

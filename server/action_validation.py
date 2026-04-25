@@ -13,7 +13,8 @@ PHASE_TOOL_WHITELIST = {
     "investigation": {"query_host", "run_forensics", "add_ioc",
                       "enrich_ioc", "scan_host_vulnerabilities"},
     "remediation":   {"block_ioc", "kill_process", "isolate_segment",
-                      "trigger_playbook", "request_human_approval"},
+                      "terminate_pid", "create_firewall_rule", "quarantine_file",
+                      "request_human_approval"},
     "report":        {"submit_containment_plan"},
 }
 
@@ -29,7 +30,9 @@ _REQUIRED_ARGS = {
     "correlate_alerts":          ["alert_ids"],
     "enrich_ioc":                ["ioc_value", "ioc_type"],
     "scan_host_vulnerabilities": ["hostname"],
-    "trigger_playbook":          ["playbook_name", "target"],
+    "terminate_pid":             ["hostname", "pid"],
+    "create_firewall_rule":      ["hostname", "target_ip", "action"],
+    "quarantine_file":           ["hostname", "file_path"],
 }
 
 
