@@ -338,9 +338,38 @@ def grade_episode(
             graph.compute_evidence_confidence(primary, rubric_item_count=rubric_items)
         )
 
-    # Final weighted score
-    raw_score = sum(_DIMENSION_WEIGHTS[k] * v for k, v in breakdown.items())
+    # Final weighted score — business_impact excluded from weighted sum and applied
+    # instead as a direct negative modifier so a maxed doomsday clock is always
+    # mathematically worse than any combination of poor-but-active play.
+    raw_score = sum(
+        _DIMENSION_WEIGHTS[k] * v for k, v in breakdown.items()
+        if k != "business_impact"
+    )
+    bi_state = float(getattr(state, "business_impact", 0.0))
+    bi_modifier = bi_state * 0.30
+    if bi_modifier > 0.0:
+        penalties.append({
+            "type": "doomsday_clock",
+            "delta": -round(bi_modifier, 4),
+            "detail": (
+                f"business_impact={bi_state:.2f}: direct -{bi_modifier:.3f} modifier"
+            ),
+        })
+    raw_score -= bi_modifier
     final_score = _clamp(raw_score)
+
+    # Negligence penalty: submitting without any containment crushes the score by 90%
+    if breakdown.get("threat_containment", 0.0) == 0.0:
+        pre_penalty = final_score
+        final_score = _clamp(final_score * 0.1)
+        penalties.append({
+            "type": "negligence_penalty",
+            "delta": -round(pre_penalty - final_score, 4),
+            "detail": (
+                "threat_containment=0.0: score multiplied by 0.1 "
+                "(no threats contained)"
+            ),
+        })
 
     reward_functions = {f"reward_{k}": v for k, v in breakdown.items()}
 

@@ -134,6 +134,35 @@ class ActionMiddleware:
                     "message": f"Host '{hostname}' not in threat graph; run query_host first",
                 }
 
+        # Emergency isolation gate: allow early isolate_segment only when a critical
+        # alert proves an active threat on the targeted subnet/host; otherwise penalise
+        # the panic as UNJUSTIFIED_EMERGENCY.
+        if action_type == "isolate_segment" and current_phase == "triage":
+            subnet = args.get("subnet", "")
+            target_host = args.get("target_host", "")
+            has_critical = False
+            if graph is not None:
+                for alert in graph.alerts.values():
+                    if alert.severity != "critical":
+                        continue
+                    src = alert.source_host
+                    if target_host and src == target_host:
+                        has_critical = True
+                        break
+                    if subnet and src in graph.hosts:
+                        host_node = graph.hosts.get(src)
+                        if host_node and getattr(host_node, "subnet", "") == subnet:
+                            has_critical = True
+                            break
+            if not has_critical:
+                return {
+                    "error_type": "UNJUSTIFIED_EMERGENCY",
+                    "message": (
+                        "isolate_segment during triage requires a critical-severity alert "
+                        "on the targeted subnet/host to justify emergency response"
+                    ),
+                }
+
         return None
 
 
@@ -295,6 +324,32 @@ class CyberSOCEnvironment(Environment):
         # Initialize threat graph from task definition
         self._threat_graph = ThreatGraph()
         self._populate_threat_graph()
+
+        # Inject external threat-intel feed IOCs so Blue can immediately enrich/block them
+        # without hitting GRAPH_FAILURE (simulates acting on CISA or partner feed data).
+        for ioc_entry in self._task_def.get("external_intel_feed", []) or []:
+            if isinstance(ioc_entry, str):
+                ioc_value = ioc_entry
+                parts = ioc_entry.split(".")
+                if len(parts) == 4 and all(p.isdigit() for p in parts):
+                    ioc_type = "ip"
+                elif len(ioc_entry) >= 32 and "." not in ioc_entry:
+                    ioc_type = "hash"
+                else:
+                    ioc_type = "domain"
+            elif isinstance(ioc_entry, dict):
+                ioc_value = ioc_entry.get("value", "")
+                ioc_type = ioc_entry.get("type", "ip")
+            else:
+                continue
+            if not ioc_value:
+                continue
+            if ioc_value not in self._threat_graph.iocs:
+                self._threat_graph.add_ioc(
+                    IOCNode(ioc_value=ioc_value, ioc_type=ioc_type, confidence=0.70)
+                )
+            self._discovered_iocs.add(ioc_value)
+
         self._last_obs_extras: Dict[str, Any] = {}
 
         return self._build_observation(reward=0.0, done=False)
@@ -434,7 +489,12 @@ class CyberSOCEnvironment(Environment):
         )
         if validation_error:
             error_type = validation_error.get("error_type", "")
-            penalty = -0.10 if error_type == "PHASE_VIOLATION" else -0.05
+            if error_type == "PHASE_VIOLATION":
+                penalty = -0.10
+            elif error_type == "UNJUSTIFIED_EMERGENCY":
+                penalty = -0.15
+            else:
+                penalty = -0.05
             self._state.total_reward += penalty
             return self._build_observation(reward=penalty, done=False)
 
@@ -1802,7 +1862,8 @@ class CyberSOCEnvironment(Environment):
         else:
             # Deterministic fallback for imitation warm-start (adaptive=True path)
             det_action = self._deterministic_red_policy(action_type, target, red_obs)
-            if det_action.get("type") == "lateral_pivot":
+            atype = det_action.get("type", "pass_turn")
+            if atype == "lateral_pivot":
                 self._handle_lateral_pivot(
                     LateralPivot(
                         type="lateral_pivot",
@@ -1810,6 +1871,17 @@ class CyberSOCEnvironment(Environment):
                         target_host=det_action["target_host"],
                     )
                 )
+            elif atype == "deploy_payload":
+                dp_host = det_action.get("hostname", "")
+                dp_payload = det_action.get("payload_type", "ransomware")
+                if dp_host:
+                    self._handle_deploy_payload(
+                        DeployPayload(
+                            type="deploy_payload",
+                            hostname=dp_host,
+                            payload_type=dp_payload,
+                        )
+                    )
             self._log_red_decision(red_obs, det_action)
 
     def _deterministic_red_policy(
@@ -1817,23 +1889,54 @@ class CyberSOCEnvironment(Environment):
     ) -> Dict[str, Any]:
         """Rule-based Red policy for SFT imitation warm-start data collection.
 
-        Pivots from a compromised host to a healthy neighbour whenever Blue
-        just killed a process, isolated a segment, or blocked an IOC (i.e.
-        Blue is actively containing). Otherwise passes to stay stealthy.
+        Priority order:
+          1. Stall punishment — >= 3 consecutive passive Blue actions deploy ransomware.
+          2. Reactive pivot   — Blue containment action triggers lateral movement.
+          3. Autonomous pivot — 15% chance to spread even on passive Blue actions.
         """
-        if blue_action in ("kill_process", "isolate_segment", "block_ioc"):
-            compromised = red_obs.get("compromised_hosts", [])
+        _passive = frozenset({"query_host", "pass_turn"})
+        _containment = frozenset({"kill_process", "isolate_segment", "block_ioc"})
+
+        compromised = red_obs.get("compromised_hosts", [])
+
+        # 1. Stall punishment: >= 3 consecutive passive steps without containment
+        if blue_action in _passive and compromised:
+            streak = 0
+            for entry in reversed(getattr(self, "_recent_actions", [])):
+                if isinstance(entry, tuple) and entry[0] in _passive:
+                    streak += 1
+                else:
+                    break
+            if streak >= 3:
+                return {
+                    "type": "deploy_payload",
+                    "hostname": compromised[0],
+                    "payload_type": "ransomware",
+                }
+
+        # 2. Reactive pivot on Blue containment actions
+        if blue_action in _containment:
             src = compromised[0] if compromised else (blue_target or None)
             if src is not None and src in self._host_index:
                 dst = next(
-                    (
-                        h for h, hd in self._host_index.items()
-                        if hd.get("status") not in ("compromised", "isolated") and h != src
-                    ),
+                    (h for h, hd in self._host_index.items()
+                     if hd.get("status") not in ("compromised", "isolated") and h != src),
                     None,
                 )
                 if dst:
                     return {"type": "lateral_pivot", "source_host": src, "target_host": dst}
+
+        # 3. Autonomous pivot: 15% chance even when Blue is passive
+        if blue_action in _passive and compromised and self._rng.random() < 0.15:
+            src = compromised[0]
+            dst = next(
+                (h for h, hd in self._host_index.items()
+                 if hd.get("status") not in ("compromised", "isolated") and h != src),
+                None,
+            )
+            if dst:
+                return {"type": "lateral_pivot", "source_host": src, "target_host": dst}
+
         return {"type": "pass_turn"}
 
     def export_red_team_decisions(self) -> List[Dict[str, Any]]:

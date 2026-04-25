@@ -247,6 +247,7 @@ const API = (() => {
       available_playbooks:   obs.available_playbooks   || [],
       done:                  msg.done   ?? obs.done   ?? false,
       reward:                msg.reward ?? obs.reward ?? 0,
+      active_turn:           obs.active_turn || null,
     };
   }
 

@@ -161,7 +161,7 @@ async def ws_session(websocket: WebSocket, session_id: str):
                         except Exception:
                             pass
 
-                    env = CyberSOCEnvironment()
+                    env = CyberSOCEnvironment(fsp_mode=True)
                     with _sessions_lock:
                         _sessions[session_id] = env
 

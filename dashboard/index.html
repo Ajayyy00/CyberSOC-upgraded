@@ -82,6 +82,9 @@
       <div id="red-team-alert" class="red-team-alert hidden">
         🔴 RED TEAM ACTIVE — ADAPTIVE PIVOT DETECTED
       </div>
+      <div id="turn-indicator" class="turn-indicator hidden">
+        <span id="turn-text"></span>
+      </div>
     </div>
 
     <div class="header-right">
@@ -241,6 +244,43 @@
               <option value="medium">Medium</option>
               <option value="hard" selected>Hard</option>
             </select>
+          </div>
+        </div>
+
+        <!-- Red Team Toolkit -->
+        <div class="red-team-section">
+          <h3 class="section-label">🔴 Red Team Toolkit</h3>
+          <div class="rt-form">
+            <select id="red-action-select" class="task-select rt-select">
+              <option value="pass_turn">Pass Turn</option>
+              <option value="lateral_pivot">Lateral Pivot</option>
+              <option value="deploy_payload">Deploy Payload</option>
+              <option value="evade_detection">Evade Detection</option>
+            </select>
+
+            <div id="rt-fields-lateral_pivot" class="rt-fields hidden">
+              <input id="red-src" type="text" placeholder="Source Host" class="rt-input">
+              <input id="red-dst" type="text" placeholder="Target Host" class="rt-input">
+            </div>
+
+            <div id="rt-fields-deploy_payload" class="rt-fields hidden">
+              <input id="red-payload-host" type="text" placeholder="Hostname" class="rt-input">
+              <select id="red-payload-type" class="task-select rt-select">
+                <option value="ransomware">Ransomware</option>
+                <option value="exfiltration">Exfiltration</option>
+                <option value="c2">C2</option>
+              </select>
+            </div>
+
+            <div id="rt-fields-evade_detection" class="rt-fields hidden">
+              <input id="red-evade-host" type="text" placeholder="Hostname" class="rt-input">
+              <select id="red-evade-technique" class="task-select rt-select">
+                <option value="migrate_pid">migrate_pid</option>
+                <option value="clear_logs">clear_logs</option>
+              </select>
+            </div>
+
+            <button id="btn-execute-red" class="btn btn-red" disabled>Execute Red Action</button>
           </div>
         </div>
 

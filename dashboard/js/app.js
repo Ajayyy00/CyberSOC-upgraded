@@ -40,6 +40,7 @@ class StateStore {
       playbookResult: null,
       correlationResults: null,
       threatGraphSummary: null,
+      activeTurn: null,
     };
   }
 
@@ -87,6 +88,7 @@ class StateStore {
       playbookResult:      obs.playbook_result      ?? null,
       correlationResults:  obs.correlation_results  ?? null,
       threatGraphSummary:  obs.threat_graph_summary ?? this._state.threatGraphSummary,
+      activeTurn:          obs.active_turn           ?? this._state.activeTurn,
     });
     if (!wasActive) this.emit('episode:started', { obs, action });
     this.emit('episode:step', { obs, action });
@@ -106,6 +108,75 @@ class StateStore {
   reset() {
     this._state = StateStore._emptyState();
     this.emit('episode:reset', {});
+  }
+}
+
+
+// ============================================================
+// RedTeamController — manages the Red Team Toolkit UI panel
+// ============================================================
+class RedTeamController {
+  constructor(dashboard) {
+    this.dashboard = dashboard;
+    this._actionFields = ['lateral_pivot', 'deploy_payload', 'evade_detection'];
+    this._bindEvents();
+    this._onActionTypeChange();
+  }
+
+  _bindEvents() {
+    const select = document.getElementById('red-action-select');
+    const btn    = document.getElementById('btn-execute-red');
+    if (select) select.addEventListener('change', () => this._onActionTypeChange());
+    if (btn)    btn.addEventListener('click',    () => this._onExecuteClick());
+  }
+
+  _onActionTypeChange() {
+    const actionType = document.getElementById('red-action-select')?.value;
+    this._actionFields.forEach(t => {
+      const el = document.getElementById(`rt-fields-${t}`);
+      if (el) el.classList.toggle('hidden', t !== actionType);
+    });
+  }
+
+  async _onExecuteClick() {
+    const actionType = document.getElementById('red-action-select')?.value || 'pass_turn';
+    let action = { type: actionType };
+
+    if (actionType === 'lateral_pivot') {
+      action.source_host = document.getElementById('red-src')?.value?.trim() || '';
+      action.target_host = document.getElementById('red-dst')?.value?.trim() || '';
+    } else if (actionType === 'deploy_payload') {
+      action.hostname     = document.getElementById('red-payload-host')?.value?.trim() || '';
+      action.payload_type = document.getElementById('red-payload-type')?.value || 'ransomware';
+    } else if (actionType === 'evade_detection') {
+      action.hostname  = document.getElementById('red-evade-host')?.value?.trim() || '';
+      action.technique = document.getElementById('red-evade-technique')?.value || 'migrate_pid';
+    }
+
+    const btn = document.getElementById('btn-execute-red');
+    if (btn) btn.disabled = true;
+
+    try {
+      const obs = await this.dashboard.api.step(action);
+      AnimationUtils.showNotification(`🔴 Red: ${actionType.replace(/_/g, ' ')}`, 'red', 2000);
+      if (!obs.done && obs.active_turn !== 'red' && !this.dashboard.isPaused) {
+        this.dashboard._scheduleNextStep(2000);
+      }
+    } catch (err) {
+      AnimationUtils.showNotification(`❌ Red action failed: ${err.message.substring(0, 60)}`, 'red', 3000);
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  setEnabled(enabled) {
+    const btn    = document.getElementById('btn-execute-red');
+    const select = document.getElementById('red-action-select');
+    if (btn)    btn.disabled    = !enabled;
+    if (select) select.disabled = !enabled;
+    document.querySelectorAll('.rt-input').forEach(f => { f.disabled = !enabled; });
+    document.querySelectorAll('.rt-fields select').forEach(f => { f.disabled = !enabled; });
+    const section = document.querySelector('.red-team-section');
+    if (section) section.classList.toggle('rt-disabled', !enabled);
   }
 }
 
@@ -131,6 +202,7 @@ class CyberSOCDashboard {
     this.episodeRunning = false;
     this.prevAlertIds = new Set();
     this.currentAction = null;
+    this.redTeamController = null;
   }
 
   async init() {
@@ -141,6 +213,7 @@ class CyberSOCDashboard {
     this.api.setStore(this.store);
     this._subscribeToStore();
     this._bindButtons();
+    this.redTeamController = new RedTeamController(this);
     this._showConnectionOverlay('Connecting to CyberSOC Server...');
     await this._waitForServer();
   }
@@ -280,6 +353,7 @@ class CyberSOCDashboard {
 
     this._updateHeader(obs);
     this._updatePhase(0, obs.max_steps);
+    this._updateTurnIndicator(obs.active_turn);
     this._populateInitialAlerts(obs.alert_queue || []); // async fire-and-forget
     this._updateNetworkTopology(obs.network_topology);
     this._updateBusinessImpact(obs.business_impact_score ?? 0);
@@ -301,6 +375,7 @@ class CyberSOCDashboard {
 
     this._updateHeader(obs);
     this._updatePhase(obs.step_count, obs.max_steps);
+    this._updateTurnIndicator(obs.active_turn);
     this._updateActionLog(obs.timeline, action, obs);
     this._updateNetworkTopology(obs.network_topology);
     this._updateBusinessImpact(obs.business_impact_score ?? 0);
@@ -536,12 +611,13 @@ class CyberSOCDashboard {
         this.episodeRunning = false;
         if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
         // episode:ended was already emitted by store → _handleEpisodeComplete() fired
-      } else if (!this.isPaused) {
+      } else if (!this.isPaused && obs.active_turn !== 'red') {
         let delay = 2000;
         if (action.type === 'isolate_segment') delay = 3000;
         if (action.type === 'submit_containment_plan') delay = 500;
         this._scheduleNextStep(delay);
       }
+      // When active_turn === 'red', auto-play pauses — RedTeamController resumes it
     } catch (err) {
       console.error('Step failed:', err);
       AnimationUtils.showNotification(`❌ Step failed: ${err.message.substring(0, 80)}`, 'red', 4000);
@@ -589,6 +665,24 @@ class CyberSOCDashboard {
   // ============================================================
   // UI Update Helpers
   // ============================================================
+
+  _updateTurnIndicator(activeTurn) {
+    const el   = document.getElementById('turn-indicator');
+    const text = document.getElementById('turn-text');
+    if (!el) return;
+
+    if (!activeTurn) {
+      el.classList.add('hidden');
+      this.redTeamController?.setEnabled(false);
+      return;
+    }
+
+    el.classList.remove('hidden');
+    const isRed = activeTurn === 'red';
+    el.className = `turn-indicator ${isRed ? 'red-turn' : 'blue-turn'}`;
+    if (text) text.textContent = isRed ? '🔴 RED TEAM TURN' : '🔵 BLUE TEAM TURN';
+    this.redTeamController?.setEnabled(isRed);
+  }
 
   _updateHeader(obs) {
     const stepEl    = document.getElementById('header-step');
@@ -1011,6 +1105,10 @@ class CyberSOCDashboard {
 
     document.querySelectorAll('.phase-dot').forEach(d => d.classList.remove('active', 'completed'));
     document.querySelectorAll('.phase-connector').forEach(c => c.classList.remove('completed'));
+
+    const turnEl = document.getElementById('turn-indicator');
+    if (turnEl) turnEl.classList.add('hidden');
+    this.redTeamController?.setEnabled(false);
 
     if (this.rewardTimeline) this.rewardTimeline.reset();
     // store.reset() already zeroed liveScores; pass them to the chart directly

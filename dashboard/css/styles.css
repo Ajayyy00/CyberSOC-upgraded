@@ -525,3 +525,46 @@ html, body { height: 100%; overflow: hidden; font-family: 'Inter', sans-serif;
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 ::-webkit-scrollbar-thumb:hover { background:var(--border-hover); }
+
+/* ============================================================ Turn Indicator */
+.turn-indicator {
+  font-size:10px; font-weight:700; letter-spacing:.08em;
+  padding:3px 10px; border-radius:4px; border:1px solid;
+  white-space:nowrap;
+}
+.turn-indicator.blue-turn {
+  color:var(--accent-blue); border-color:rgba(59,130,246,.5);
+  background:rgba(59,130,246,.1);
+}
+.turn-indicator.red-turn {
+  color:var(--accent-red); border-color:rgba(239,68,68,.5);
+  background:rgba(239,68,68,.1); animation:blink .7s ease infinite;
+}
+
+/* ============================================================ Red Team Toolkit */
+.red-team-section {
+  padding:7px 11px; border-top:1px solid rgba(239,68,68,.2);
+  background:rgba(239,68,68,.03); flex-shrink:0;
+}
+.red-team-section.rt-disabled { opacity:.45; pointer-events:none; }
+
+.rt-form { display:flex; flex-direction:column; gap:5px; }
+.rt-select { width:100%; }
+
+.rt-fields { display:flex; flex-direction:column; gap:4px; }
+
+.rt-input {
+  width:100%; padding:4px 7px; border-radius:4px;
+  background:var(--bg-secondary); color:var(--text-primary);
+  border:1px solid var(--border); font-size:11px; outline:none;
+  font-family:'Inter', sans-serif;
+}
+.rt-input:focus { border-color:var(--accent-red); }
+.rt-input::placeholder { color:var(--text-muted); }
+
+.btn-red {
+  background:rgba(239,68,68,.15); color:var(--accent-red);
+  border:1px solid rgba(239,68,68,.5); width:100%;
+}
+.btn-red:hover:not(:disabled) { background:rgba(239,68,68,.28); box-shadow:var(--glow-red); }
+.btn-red:disabled { opacity:.4; }
