@@ -196,6 +196,7 @@ class CyberSOCEnvironment(Environment):
         self._disruption_cost: float = 0.0  # accumulates per clean host/subnet isolated
         self._discovered_iocs: set = set()  # IOCs revealed via run_forensics or enrich_ioc
         self._quarantined_files: set[tuple[str, str]] = set()
+        self._step_reward_total: float = 0.0
 
     def _reset_rubric(self):
         """Initialize live containment requirements for dynamic grading in adaptive mode."""
