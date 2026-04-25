@@ -67,6 +67,7 @@ def grade_episode(
     scanned_hosts = list(getattr(state, "scanned_hosts", []) or [])
     enriched_iocs = list(getattr(state, "enriched_iocs", []) or [])
     correlated_pairs = list(getattr(state, "correlated_alert_pairs", []) or [])
+    triggered_playbooks = list(getattr(state, "triggered_playbooks", []) or [])
 
     # ---- 1. threat_containment ----
     if must_kill:
@@ -216,48 +217,70 @@ def grade_episode(
         })
         base = max(0.0, base + delta)
 
-    # Over-isolation flag: blunt-force approach spanning >20% of known graph hosts
+    # Over-isolation: penalise isolating hosts not in the attack chain.
+    # justified_set = hosts from attack_chain.compromised_hosts + still-compromised graph nodes.
     total_hosts = len(graph.hosts)
     if total_hosts > 0:
         isolated_count = sum(1 for h in graph.hosts.values() if h.status == "isolated")
-        if isolated_count / total_hosts > 0.20:
-            delta = -0.30
-            penalties.append({
-                "type": "over_isolation",
-                "delta": delta,
-                "detail": f">20% of hosts isolated ({isolated_count}/{total_hosts})",
-            })
-            base = max(0.0, base + delta)
+
+        if isolated_count > 0:
+            justified_set: set = set()
+            for threat in task_def.get("attack_chain", []) or []:
+                for h in threat.get("compromised_hosts", []) or []:
+                    justified_set.add(h)
+            for hname, hnode in graph.hosts.items():
+                if hnode.status == "compromised":
+                    justified_set.add(hname)
+
+            wrong_isolations = sum(
+                1 for hname, hnode in graph.hosts.items()
+                if hnode.status == "isolated" and hname not in justified_set
+            )
+            if wrong_isolations > 0:
+                delta = -min(0.80, wrong_isolations * 0.20)
+                penalties.append({
+                    "type": "over_isolation",
+                    "delta": delta,
+                    "detail": f"{wrong_isolations} host(s) isolated without attack-chain justification",
+                })
+                base = max(0.0, base + delta)
+            elif isolated_count / total_hosts > 0.20:
+                # All isolations justified but scale is a blunt sweep
+                delta = -0.20
+                penalties.append({
+                    "type": "over_isolation",
+                    "delta": delta,
+                    "detail": f">20% of hosts isolated ({isolated_count}/{total_hosts})",
+                })
+                base = max(0.0, base + delta)
 
     breakdown["business_impact"] = base
 
     # ---- 8. step_efficiency ----
-    # Reward high threat containment achieved in fewer total steps.
-    steps_used = max(1, len(episode_actions))
-    max_steps = max(1, int(getattr(state, "max_steps", 30) or 30))
-    containment = breakdown.get("threat_containment", 0.0)
-    step_factor = 1.0 - min(1.0, (steps_used - 1) / max_steps)
-    efficiency = containment * step_factor
-
-    if containment >= 0.8 and steps_used <= max(3, max_steps // 3):
-        delta = _capped(0.08)
+    eff_base = 1.0 if triggered_playbooks else 0.5
+    playbook_bonus_total = 0.0
+    for _ in triggered_playbooks:
+        delta = _capped(0.10)
         bonuses.append({
-            "type": "fast_high_containment",
+            "type": "playbook_triggered",
             "delta": delta,
-            "detail": f"high containment ({containment:.2f}) achieved in {steps_used} step(s)",
+            "detail": "SOAR playbook used",
         })
-        efficiency += delta
+        playbook_bonus_total += delta
+    playbook_bonus_total = min(playbook_bonus_total, 0.30)
+    eff_base += playbook_bonus_total
 
-    if containment < 0.4 and steps_used > max_steps // 2:
-        delta = _capped(-0.08)
+    steps_used = len(episode_actions)
+    over = max(0, steps_used - 15)
+    if over > 0:
+        delta = _capped(-0.05 * over)
         penalties.append({
-            "type": "inefficient_low_containment",
+            "type": "step_overrun",
             "delta": delta,
-            "detail": f"low containment ({containment:.2f}) after {steps_used} step(s)",
+            "detail": f"used {steps_used} steps, over budget by {over}",
         })
-        efficiency += delta
-
-    breakdown["step_efficiency"] = _clamp(efficiency)
+        eff_base += delta
+    breakdown["step_efficiency"] = _clamp(eff_base)
 
     # ---- 9. plan_coverage ----
     if final_plan is None:
