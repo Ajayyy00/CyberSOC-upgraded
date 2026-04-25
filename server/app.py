@@ -22,6 +22,9 @@ Usage:
     uvicorn server.app:app --host 0.0.0.0 --port 8000 --workers 4
 """
 
+import os
+import random
+
 try:
     from openenv.core.env_server.http_server import create_app
 except Exception as e:  # pragma: no cover
@@ -37,9 +40,38 @@ except (ImportError, ModuleNotFoundError):
     from server.play_environment import CyberSOCEnvironment
 
 
+class FrozenCheckpointRedPolicy:
+    """Lightweight frozen red policy shim keyed by checkpoint identity."""
+
+    def __init__(self, checkpoint: str):
+        self.checkpoint = checkpoint
+        self._rng = random.Random(hash(checkpoint))
+
+    def act(self, red_observation):
+        blue_action = red_observation.get("blue_action_type", "")
+        # Deterministic-ish heuristic controlled by checkpoint hash and episode step.
+        trigger = blue_action in {"kill_process", "isolate_segment"}
+        if trigger and self._rng.random() < 0.5:
+            return {
+                "action_type": "lateral_pivot",
+                "source_host": red_observation.get("blue_action_target", ""),
+            }
+        return {"action_type": "noop"}
+
+
+_frozen_checkpoint = os.environ.get("CYBERSOC_FROZEN_RED_CHECKPOINT", "").strip()
+_adaptive = os.environ.get("CYBERSOC_ADAPTIVE", "1").strip() not in {"0", "false", "False"}
+_red_policy = FrozenCheckpointRedPolicy(_frozen_checkpoint) if _frozen_checkpoint else None
+
+
+class ConfiguredCyberSOCEnvironment(CyberSOCEnvironment):
+    def __init__(self):
+        super().__init__(adaptive=_adaptive, neural_red_policy=_red_policy)
+
+
 # Create the app with the CyberSOCEnv environment
 app = create_app(
-    CyberSOCEnvironment,
+    ConfiguredCyberSOCEnvironment,
     SOCActionWrapper,
     SOCObservation,
     env_name="cybersocenv",

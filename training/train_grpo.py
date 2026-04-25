@@ -49,19 +49,29 @@ except ImportError:
 class EnvServer:
     """Starts and monitors the CyberSOCEnv FastAPI server as a subprocess."""
 
-    def __init__(self, cfg: TrainingConfig):
+    def __init__(self, cfg: TrainingConfig, frozen_opponent: str = ""):
         self.cfg = cfg
+        self.frozen_opponent = frozen_opponent
         self._proc: Optional[subprocess.Popen] = None
 
     def start(self) -> None:
         cmd = [
             sys.executable, "-m", "uvicorn",
-            "server:app",
+            "server.app:app",
             "--host", self.cfg.env_host,
             "--port", str(self.cfg.env_port),
             "--log-level", "warning",
         ]
-        self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        env = os.environ.copy()
+        if self.frozen_opponent:
+            env["CYBERSOC_FROZEN_RED_CHECKPOINT"] = self.frozen_opponent
+        env.setdefault("CYBERSOC_ADAPTIVE", "1")
+        self._proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
         print(f"[server] PID {self._proc.pid} starting on :{self.cfg.env_port} ...")
         self._wait_healthy()
 
@@ -313,6 +323,20 @@ def make_all_reward_fns(env_url: str) -> List:
     return fns
 
 
+def invert_reward_fns(reward_fns: List) -> List:
+    """Invert blue-centric rewards for red training."""
+    inverted = []
+    for fn in reward_fns:
+        def _wrap(base_fn):
+            def _inv(completions: List[str], **kwargs) -> List[float]:
+                values = base_fn(completions, **kwargs)
+                return [-float(v) for v in values]
+            _inv.__name__ = f"inv_{getattr(base_fn, '__name__', 'reward')}"
+            return _inv
+        inverted.append(_wrap(fn))
+    return inverted
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # 5. Main
 # ═══════════════════════════════════════════════════════════════════════════
@@ -321,8 +345,12 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="CyberSOC GRPO Training")
     p.add_argument("--model",     default="", help="HuggingFace model ID (overrides config)")
     p.add_argument("--steps",     type=int, default=0, help="Max training steps (overrides config)")
+    p.add_argument("--episodes",  type=int, default=0, help="Alias for steps in freeze-alternate mode")
     p.add_argument("--tasks",     default="", help="Comma-separated task IDs, e.g. easy,medium,hard")
     p.add_argument("--hub-id",    default="", dest="hub_id", help="HF Hub model ID for checkpoint push")
+    p.add_argument("--output-dir", default="", help="Override output directory")
+    p.add_argument("--train-role", choices=["blue", "red"], default="blue", help="Policy role being optimized")
+    p.add_argument("--frozen-opponent", default="", help="Path/ID for frozen opponent checkpoint")
     p.add_argument("--no-server", action="store_true", help="Skip starting env server (already running)")
     return p.parse_args()
 
@@ -333,8 +361,10 @@ def main() -> None:
 
     if args.model:  cfg.model_name   = args.model
     if args.steps:  cfg.max_steps    = args.steps
+    if args.episodes: cfg.max_steps  = args.episodes
     if args.tasks:  cfg.task_ids     = args.tasks.split(",")
     if args.hub_id: cfg.hub_model_id = args.hub_id
+    if args.output_dir: cfg.output_dir = args.output_dir
 
     hf_token = os.environ.get("HF_TOKEN", "")
 
@@ -343,11 +373,14 @@ def main() -> None:
     print(f"  Model  : {cfg.model_name}")
     print(f"  Tasks  : {cfg.task_ids}")
     print(f"  Steps  : {cfg.max_steps}")
+    print(f"  Role   : {args.train_role}")
+    if args.frozen_opponent:
+        print(f"  Frozen : {args.frozen_opponent}")
     print(f"  Hub    : {cfg.hub_model_id or '(local only)'}")
     print("=" * 60)
 
     # 1. Start env server ────────────────────────────────────────────────────
-    server = EnvServer(cfg)
+    server = EnvServer(cfg, frozen_opponent=args.frozen_opponent)
     if not args.no_server:
         server.start()
 
@@ -382,6 +415,9 @@ def main() -> None:
         # 4. Build reward functions ───────────────────────────────────────────
         print("\n[rewards] wiring 11 reward functions (10 dims + weighted total) ...")
         reward_fns = make_all_reward_fns(cfg.env_url)
+        if args.train_role == "red":
+            reward_fns = invert_reward_fns(reward_fns)
+            print("[rewards] role=red -> inverted blue-centric rewards")
         print(f"[rewards] ✓ {len(reward_fns)} functions registered")
 
         # 5. GRPO config ──────────────────────────────────────────────────────
