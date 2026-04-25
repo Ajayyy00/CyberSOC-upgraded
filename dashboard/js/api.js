@@ -49,22 +49,8 @@ const API = (() => {
     }
   })();
 
-  // ── External backend override (set by dashboard/js/config.js in Demo mode) ─
-  // config.js sets window.CYBERSOC_BACKEND_URL to the trainer Space URL.
-  // Empty string → auto-detect from page origin (default for full-stack mode).
-  const _backendOverride = (
-    typeof window !== 'undefined' &&
-    typeof window.CYBERSOC_BACKEND_URL === 'string' &&
-    window.CYBERSOC_BACKEND_URL.trim()
-  ) ? window.CYBERSOC_BACKEND_URL.trim().replace(/\/$/, '') : '';
-
   // ── WebSocket URL ──────────────────────────────────────────────────────────
   function _wsUrl() {
-    if (_backendOverride) {
-      const wsProto = _backendOverride.startsWith('https') ? 'wss:' : 'ws:';
-      const host    = _backendOverride.replace(/^https?:\/\//, '');
-      return `${wsProto}//${host}/ws/${_sessionId}`;
-    }
     if (typeof window === 'undefined') {
       return `ws://localhost:8000/ws/${_sessionId}`;
     }
@@ -77,7 +63,6 @@ const API = (() => {
 
   // HTTP base URL — used only by checkConnection() which pings /health over HTTP
   function _httpBase() {
-    if (_backendOverride) return _backendOverride;
     if (typeof window === 'undefined') return 'http://localhost:8000';
     const { protocol, hostname, port } = window.location;
     if (protocol === 'file:') return 'http://localhost:8000';
