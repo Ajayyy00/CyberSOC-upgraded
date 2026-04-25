@@ -9,6 +9,10 @@ pinned: false
 
 # CyberSOC: Complete Project Review
 
+> **New — Hotseat Multiplayer Mode**: A human can now play the Red Team live from the dashboard. After every Blue action the UI pauses, enables the **🔴 Red Team Toolkit**, shows a `BLUE / RED TEAM TURN` indicator in the header, and resumes Blue auto-play only after the Red player submits their move. Backend now runs in FSP (Fictitious Self-Play) mode by default.
+
+> **New — 4 Architectural Upgrades**: Lazy Adversary (stall punishment + 15 % autonomous pivot), Rigid Bureaucracy emergency-isolation gate (UNJUSTIFIED\_EMERGENCY penalty), Siloed Intelligence external intel feed injection, and Depressed Analyst doomsday-clock direct modifier + negligence penalty.
+
 ## 1. Project Overview — RLVR Positioning
 
 CyberSOC (CyberSOCEnv) is an **RLVR-stage reinforcement learning environment** that sits at the final rung of the model-maturation arc: **Random Init → Pretraining → SFT/IFT → Preference FT → RLVR**. It does not pretrain, supervise, or preference-align — it consumes a base model that has already been through those stages and turns its agentic actions into a dense, verifiable, 10-dimensional reward signal that GRPO can train on.
@@ -257,7 +261,7 @@ A real-time **"CyberSOC Command Center"** web dashboard with 6 panels, built wit
 3. **Agent Actions** — Chronological action log with reward tracking
 4. **Network Topology** — Visual subnet map with compromised/isolated counts
 5. **Performance Metrics** — Chart.js radar chart (10 dimensions) + cumulative reward timeline
-6. **Mission Status** — Containment progress bars, business impact gauge, active threat list, episode controls
+6. **Mission Status** — Containment progress bars, business impact gauge, active threat list, episode controls, **🔴 Red Team Toolkit** (hotseat multiplayer)
 
 ### 5.3 Visual Design
 
@@ -406,13 +410,14 @@ sequenceDiagram
 
 The Red Team is NOT a separate LLM agent. It is a **deterministic adversarial dynamics engine** that defines the environment's state transition function.
 
-### 6 Behavioral Mechanisms
+### 7 Behavioral Mechanisms
 1. **Reactive Pivoting**: Triggers on `isolate_segment` and `kill_process` (copy-not-move spread)
 2. **Persistence**: Reinfection triggers when a process is killed but its root IOC remains unblocked (teaches causal reasoning)
 3. **Time Pressure**: Pivot probability escalates +0.2 after step 10 if zero containments are achieved
 4. **Controlled Randomness**: Uses an episode-scoped `self._rng` (seeded by `task_id`) to ensure deterministic rollouts
 5. **Noisy Observations**: Benign processes mixed in host data
 6. **Escalation**: Pivot probabilities scale with difficulty (`Easy: 0.0`, `Medium: 0.3`, `Hard: 0.8`)
+7. **Stall Punishment** *(new)*: If Blue makes 3+ consecutive passive actions (`query_host` / `pass_turn`) without containment, Red immediately deploys ransomware; plus a 15 % chance to spread laterally even on passive Blue turns
 
 ### Attack Lifecycle Model (MITRE-aligned)
 `Phase 1: Compromise` → `Phase 2: Lateral Movement` → `Phase 3: Persistence` → `Phase 4: Escalation` → `Phase 5: Impact`
@@ -524,6 +529,11 @@ Per guide §17, responsibilities are split across three functional roles to exec
 | **Live GRPO Signals** | Per-step reward dimensions for RL credit assignment |
 | **Anti-Gaming** | Blind-blocking penalties, over-isolation cap, idempotent step rewards (0.40 cap) |
 | **Real-time Dashboard** | D3.js threat graph with pivot animations and 10-dim radar chart |
+| **Hotseat Multiplayer** | Human Red Team player via in-dashboard toolkit; FSP backend; per-turn UI lock |
+| **Stall Punishment** | 3 consecutive passive Blue actions triggers ransomware deploy + 15 % autonomous pivot |
+| **Emergency Gate** | `isolate_segment` in triage requires a critical alert; `UNJUSTIFIED_EMERGENCY` → -0.15 penalty |
+| **External Intel Feed** | `task_def.external_intel_feed` IOCs injected at reset — immediately blockable/enrichable |
+| **Doomsday Clock** | `state.business_impact × 0.30` applied as a direct score modifier; 90 % negligence crush when no threats contained |
 
 ---
 
