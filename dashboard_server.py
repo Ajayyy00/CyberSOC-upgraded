@@ -176,9 +176,16 @@ async def ws_session(websocket: WebSocket, session_id: str):
                     continue
 
                 try:
-                    from models import SOCActionWrapper  # noqa: PLC0415
+                    from models import SOCActionWrapper, RedActionWrapper, RED_ACTION_TYPES  # noqa: PLC0415
                     action_fields = {k: v for k, v in msg.items() if k != "type"}
-                    action = SOCActionWrapper.model_validate(action_fields)
+                    action_type_str = action_fields.get("type", "")
+
+                    # Route to Red or Blue wrapper based on action type
+                    if action_type_str in RED_ACTION_TYPES:
+                        action = RedActionWrapper.model_validate(action_fields)
+                    else:
+                        action = SOCActionWrapper.model_validate(action_fields)
+
                     obs = await _run(env.step, action)
                     await websocket.send_json({
                         "type": "step_ok",

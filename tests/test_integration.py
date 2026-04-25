@@ -13,7 +13,7 @@ if _PROJECT_ROOT not in sys.path:
 from server.play_environment import CyberSOCEnvironment
 from server.episode_sandbox import EpisodeTimeout
 from server.graders import grade_episode
-from models import SOCActionWrapper
+from models import SOCActionWrapper, RedActionWrapper
 
 
 # ---------------------------------------------------------------------------
@@ -95,18 +95,35 @@ def test_phase_violation_returns_error():
     assert obs is not None
 
 
-def test_adaptive_pivot_fires_on_hard():
-    env = CyberSOCEnvironment(adaptive=True)
+def test_lateral_pivot_red_action():
+    """LateralPivot RedActionWrapper creates a pivoted_from edge and a SIEM alert."""
+    env = CyberSOCEnvironment(fsp_mode=True)
     env.reset(task_id="hard")
 
-    # Force pivot probability to 1.0 (hard task)
-    # We need to isolate_segment where the host is the source_host for an edge
-    # OR just call _execute_lateral_pivot directly for test certainty
-    hostname = _first_host(env)
-    env._execute_lateral_pivot(source_host=hostname)
+    # Find a compromised host to pivot from and a healthy one to pivot to
+    src = next(
+        (h for h, hd in env._host_index.items() if hd.get("status") == "compromised"),
+        None,
+    )
+    dst = next(
+        (h for h, hd in env._host_index.items()
+         if hd.get("status") not in ("compromised", "isolated") and h != src),
+        None,
+    )
+    if src is None or dst is None:
+        pytest.skip("No suitable host pair for lateral pivot test")
+
+    # Blue takes a PassTurn-equivalent (query) so active_turn flips to red
+    env.step(_valid_action("query_host", hostname=src))
+    assert env._state.active_turn == "red"
+
+    alerts_before = len(env._alert_queue)
+    env.step(RedActionWrapper(type="lateral_pivot", source_host=src, target_host=dst))
 
     pivot_edges = [e for e in env._threat_graph.edges if e.edge_type == "pivoted_from"]
     assert len(pivot_edges) >= 1
+    assert env._host_index[dst]["status"] == "compromised"
+    assert len(env._alert_queue) > alerts_before  # SIEM alert generated
 
 
 def test_step_reward_accumulates():

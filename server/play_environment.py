@@ -47,6 +47,12 @@ try:
         TerminatePID,
         CreateFirewallRule,
         QuarantineFile,
+        RedActionWrapper,
+        LateralPivot,
+        DeployPayload,
+        EvadeDetection,
+        PassTurn,
+        RED_ACTION_TYPES,
     )
 except ImportError:
     from models import (
@@ -69,6 +75,12 @@ except ImportError:
         TerminatePID,
         CreateFirewallRule,
         QuarantineFile,
+        RedActionWrapper,
+        LateralPivot,
+        DeployPayload,
+        EvadeDetection,
+        PassTurn,
+        RED_ACTION_TYPES,
     )
 
 from .tasks import get_task, build_network
@@ -149,12 +161,25 @@ class CyberSOCEnvironment(Environment):
         adaptive: bool = False,
         neural_red_policy: Optional[Any] = None,
         red_team_logger: Optional[Callable[[Dict[str, Any]], None]] = None,
+        fsp_mode: bool = False,
     ):
-        """Initialize the environment (actual state set in reset)."""
+        """Initialize the environment (actual state set in reset).
+
+        Args:
+            adaptive: Legacy adaptive-adversary flag (kept for backward compat).
+            neural_red_policy: Optional callable for neural Red policy (legacy hook).
+            red_team_logger: Optional callback for recording Red decisions.
+            fsp_mode: When True, step() uses strict alternating turns and
+                step_count only increments after BOTH Blue and Red have acted.
+                When False (default), step(SOCActionWrapper) behaves exactly as
+                before — Red's PassTurn is applied automatically so existing code
+                and tests remain unaffected.
+        """
         super().__init__()
         self._adaptive = adaptive
         self._neural_red_policy = neural_red_policy
         self._red_team_logger = red_team_logger
+        self._fsp_mode = fsp_mode
         self._red_team_decisions: List[Dict[str, Any]] = []
         self._live_requirements: Dict[str, Any] = {}
         self._threat_graph = None  # will be initialized on reset()
@@ -252,6 +277,7 @@ class CyberSOCEnvironment(Environment):
             timeline=[],
             is_done=False,
             submitted_plan=False,
+            active_turn="blue",
         )
 
         self._plan_entries = []
@@ -347,27 +373,44 @@ class CyberSOCEnvironment(Environment):
 
     def step(
         self,
-        action: SOCActionWrapper,  # type: ignore[override]
+        action,  # SOCActionWrapper | RedActionWrapper
         timeout_s: Optional[float] = None,
         **kwargs: Any,
     ) -> SOCObservation:
-        """Process one agent action.
+        """Process one agent action — Blue (SOCActionWrapper) or Red (RedActionWrapper).
 
-        Args:
-            action: SOCActionWrapper containing the typed action.
-            timeout_s: Ignored.
+        Turn semantics (fsp_mode=True):
+          • Blue step: execute, flip active_turn → 'red', do NOT increment step_count.
+          • Red step:  execute, flip active_turn → 'blue', increment step_count.
+
+        When fsp_mode=False (default / backward-compat):
+          • Blue step auto-applies a Red PassTurn so step_count always increments,
+            preserving all existing test and dashboard behaviour.
 
         Returns:
-            SOCObservation with updated state, reward, and done flag.
+            SOCObservation; includes active_turn and red_observation fields.
         """
         if self._state.is_done:
             return self._build_observation(reward=0.0, done=True)
 
-        # Convert wrapper to typed action (before consuming a step)
+        if isinstance(action, RedActionWrapper):
+            return self._step_red(action)
+        return self._step_blue(action)
+
+    # ------------------------------------------------------------------
+    # _step_blue — execute a Blue (SOC analyst) action
+    # ------------------------------------------------------------------
+
+    def _step_blue(
+        self,
+        action: SOCActionWrapper,
+    ) -> SOCObservation:
+        """Execute one Blue turn."""
+        # Convert wrapper to typed action
         typed_action = action.to_typed_action()
         args = typed_action.model_dump(exclude={"metadata", "type"})
 
-        # Pre-flight validation — invalid actions are penalised without consuming a step
+        # Pre-flight validation — penalise without consuming a step
         current_phase = self._get_current_phase()
         validation_error = self._middleware.validate(
             current_phase, typed_action.type, args, self._threat_graph
@@ -378,15 +421,12 @@ class CyberSOCEnvironment(Environment):
             self._state.total_reward += penalty
             return self._build_observation(reward=penalty, done=False)
 
-        # Action is valid — now consume the step
-        self._state.step_count += 1
+        # Reset per-step extras
+        self._last_obs_extras = {}
 
-        # Dispatch to handler
+        # Dispatch to Blue handler
         reward = 0.0
         result_description = "unknown action"
-
-        # Reset per-step observation extras at the start of every step
-        self._last_obs_extras = {}
 
         if isinstance(typed_action, QueryHost):
             reward, result_description = self._handle_query_host(typed_action)
@@ -422,9 +462,11 @@ class CyberSOCEnvironment(Environment):
         elif isinstance(typed_action, QuarantineFile):
             reward, result_description = self._handle_quarantine_file(typed_action)
 
-        # Step reward (idempotent per triple)
+        # Idempotent step reward
         target = self._get_action_target(typed_action)
-        step_r = self._get_step_reward(phase="investigation", action_type=typed_action.type, target=target)
+        step_r = self._get_step_reward(
+            phase="investigation", action_type=typed_action.type, target=target
+        )
         reward += step_r
         self._step_reward_total += step_r
 
@@ -436,26 +478,26 @@ class CyberSOCEnvironment(Environment):
         if len(self._recent_actions) >= 3:
             last_three = self._recent_actions[-3:]
             if last_three[0] == last_three[1] == last_three[2]:
-                reward -= 0.05  # stall penalty
-
-        # Adaptive adversary reaction (deterministic by default, optional neural override)
-        self._apply_red_team_dynamics(action_type=typed_action.type, target=target)
+                reward -= 0.05
 
         # Business impact grows each step (attacker progresses)
         if not self._state.is_done:
             impact_rate = self._task_def.get("impact_per_step", 0.02)
-            # Reduce impact growth if threats are being contained
-            active_ratio = len(self._state.active_threats) / max(1, len(self._task_def["attack_chain"]))
-            self._state.business_impact = min(
-                1.0,
-                self._state.business_impact + impact_rate * active_ratio,
+            active_ratio = len(self._state.active_threats) / max(
+                1, len(self._task_def["attack_chain"])
             )
+            self._state.business_impact = min(
+                1.0, self._state.business_impact + impact_rate * active_ratio
+            )
+
+        # Round label: step_count+1 = current round being played (not yet closed)
+        round_label = self._state.step_count + 1
 
         # Record timeline
         self._state.timeline.append({
-            "step": self._state.step_count,
+            "step": round_label,
             "action_type": typed_action.type,
-            "target": self._get_action_target(typed_action),
+            "target": target,
             "result": result_description,
             "reward": reward,
         })
@@ -463,16 +505,77 @@ class CyberSOCEnvironment(Environment):
         # Accumulate reward
         self._state.total_reward += reward
 
-        # Check termination
+        # Check if episode ends due to Blue action (plan submission)
         done = False
         if self._state.submitted_plan:
             done = True
             self._state.is_done = True
-        elif self._state.step_count >= self._state.max_steps:
+            self._state.active_turn = "blue"  # episode over — keep at blue
+            # In non-FSP mode, still increment step_count for consistency
+            if not self._fsp_mode:
+                self._state.step_count += 1
+            return self._build_observation(reward=reward, done=done)
+
+        # Flip turn to Red
+        self._state.active_turn = "red"
+
+        # fsp_mode=False (backward compat): auto-apply Red PassTurn so
+        # callers that only drive Blue see step_count increment as before.
+        if not self._fsp_mode:
+            self._state.step_count += 1
+            self._state.active_turn = "blue"
+            # Timeout check (done after Red's "auto turn")
+            if self._state.step_count >= self._state.max_steps:
+                reward -= 0.20
+                self._state.total_reward -= 0.20
+                self._state.is_done = True
+                done = True
+
+        return self._build_observation(reward=reward, done=done)
+
+    # ------------------------------------------------------------------
+    # _step_red — execute a Red Team action
+    # ------------------------------------------------------------------
+
+    def _step_red(self, action: RedActionWrapper) -> SOCObservation:
+        """Execute one Red turn. Only valid when active_turn == 'red'."""
+        if self._state.active_turn != "red":
+            # Wrong turn — return current obs with 0 reward (no state change)
+            return self._build_observation(reward=0.0, done=False)
+
+        typed_action = action.to_typed_action()
+        self._last_obs_extras = {}
+
+        reward = 0.0
+        result_description = "red: noop"
+
+        if isinstance(typed_action, LateralPivot):
+            reward, result_description = self._handle_lateral_pivot(typed_action)
+        elif isinstance(typed_action, DeployPayload):
+            reward, result_description = self._handle_deploy_payload(typed_action)
+        elif isinstance(typed_action, EvadeDetection):
+            reward, result_description = self._handle_evade_detection(typed_action)
+        elif isinstance(typed_action, PassTurn):
+            reward, result_description = self._handle_pass_turn(typed_action)
+
+        # Close the round: increment step_count, flip turn back to Blue
+        self._state.step_count += 1
+        self._state.active_turn = "blue"
+
+        # Record Red's action in timeline (prefixed with "red:" to distinguish)
+        self._state.timeline.append({
+            "step": self._state.step_count,
+            "action_type": f"red:{typed_action.type}",
+            "target": self._get_red_action_target(typed_action),
+            "result": result_description,
+            "reward": 0.0,  # Red actions don't add to Blue's reward total
+        })
+
+        # Timeout check after the full round
+        done = False
+        if self._state.step_count >= self._state.max_steps:
             done = True
             self._state.is_done = True
-            reward -= 0.20  # Penalty for running out of time
-            self._state.total_reward += (-0.20)
 
         return self._build_observation(reward=reward, done=done)
 
@@ -822,9 +925,6 @@ class CyberSOCEnvironment(Environment):
             reward = -0.08  # Penalty: killing legitimate process = downtime
             self._state.business_impact = min(1.0, self._state.business_impact + 0.03)
 
-        if was_malicious:
-            self._maybe_reinfect(hostname, process)
-
         return reward, f"Killed '{process}' on {hostname}. Malicious: {was_malicious}"
 
     def _handle_terminate_pid(self, action: TerminatePID) -> tuple[float, str]:
@@ -878,7 +978,6 @@ class CyberSOCEnvironment(Environment):
             self._state.business_impact = min(1.0, self._state.business_impact + 0.04)
             return reward, f"Terminated benign PID '{pid}' on {hostname} - business disruption"
 
-        self._maybe_reinfect(hostname, process_name)
         return reward, f"Terminated PID '{pid}' on {hostname}. Malicious: True"
 
     def _handle_create_firewall_rule(self, action: CreateFirewallRule) -> tuple[float, str]:
@@ -1096,6 +1195,203 @@ class CyberSOCEnvironment(Environment):
             "vulnerability_results": vuln_results,
             "description": f"Scanned {hostname}: found {len(vuln_results)} CVEs",
         }
+
+    # ===========================================================================
+    # Red Team Action Handlers
+    # ===========================================================================
+
+    def _handle_lateral_pivot(self, action: LateralPivot) -> tuple[float, str]:
+        """Red: spread from a compromised host to a new target."""
+        src = action.source_host
+        dst = action.target_host
+
+        if src not in self._host_index:
+            return 0.0, f"red: lateral_pivot — source '{src}' not in network"
+        if self._host_index[src].get("status") != "compromised":
+            return 0.0, f"red: lateral_pivot — '{src}' not under Red control"
+        if dst not in self._host_index:
+            return 0.0, f"red: lateral_pivot — target '{dst}' not in network"
+
+        dst_status = self._host_index[dst].get("status", "online")
+        if dst_status == "isolated":
+            return 0.0, f"red: lateral_pivot — '{dst}' is isolated, pivot blocked by Blue"
+        if dst_status == "compromised":
+            return 0.0, f"red: lateral_pivot — '{dst}' already compromised"
+
+        # Compromise target and copy a process from source
+        self._host_index[dst]["status"] = "compromised"
+        src_procs = (
+            [p for p in self._threat_graph.processes.values() if p.hostname == src]
+            if self._threat_graph else []
+        )
+        proc_name = src_procs[0].process_name if src_procs else "cmd.exe"
+        self._host_index[dst].setdefault("running_processes", [])
+        if proc_name not in self._host_index[dst]["running_processes"]:
+            self._host_index[dst]["running_processes"].append(proc_name)
+
+        # Update threat graph
+        if self._threat_graph is not None:
+            if dst not in self._threat_graph.hosts:
+                hd = self._host_index[dst]
+                self._threat_graph.add_host(HostNode(
+                    hostname=dst,
+                    subnet=hd.get("subnet", "corporate"),
+                    business_criticality="medium",
+                    status="compromised",
+                ))
+            else:
+                self._threat_graph.hosts[dst].status = "compromised"
+
+            pid = f"{dst}:{proc_name}"
+            if pid not in self._threat_graph.processes:
+                self._threat_graph.add_process(ProcessNode(
+                    process_id=pid, hostname=dst, process_name=proc_name
+                ))
+            self._threat_graph.add_edge(Edge(
+                edge_type="pivoted_from", source_id=dst, target_id=src
+            ))
+
+        # Generate SIEM alert for Blue
+        alert_id = f"PIVOT-{uuid.uuid4().hex[:6].upper()}"
+        subnet = self._host_index.get(dst, {}).get("subnet", "unknown")
+        self._alert_queue.append({
+            "alert_id": alert_id,
+            "timestamp": "2024-01-01T00:00:00Z",
+            "source_host": dst,
+            "severity": "critical",
+            "threat_type": "lateral_movement",
+            "description": (
+                f"Lateral movement detected: {proc_name} spawned on {dst} "
+                f"(pivot from {src})"
+            ),
+            "ioc_indicators": [],
+            "subnet": subnet,
+            "is_acknowledged": False,
+        })
+        if self._threat_graph is not None:
+            self._threat_graph.add_alert(AlertNode(
+                alert_id=alert_id, severity="critical",
+                priority_score=15.0, source_host=dst,
+            ))
+
+        # Update live rubric
+        if self._live_requirements is not None:
+            self._live_requirements.setdefault("must_kill", []).append({
+                "hostname": dst, "process": proc_name, "threat_id": "FSP_PIVOT",
+            })
+
+        return 0.0, f"red: lateral_pivot {src} → {dst} (proc={proc_name})"
+
+    def _handle_deploy_payload(self, action: DeployPayload) -> tuple[float, str]:
+        """Red: deploy a malicious payload on a host Red controls."""
+        hostname = action.hostname
+        payload_type = action.payload_type
+
+        if hostname not in self._host_index:
+            return 0.0, f"red: deploy_payload — '{hostname}' not in network"
+        if self._host_index[hostname].get("status") != "compromised":
+            return 0.0, f"red: deploy_payload — no shell on '{hostname}'"
+
+        proc_name = {
+            "ransomware": "ransomware.exe",
+            "exfiltration": "exfil_agent.exe",
+            "c2": "c2_beacon.exe",
+        }[payload_type]
+
+        host = self._host_index[hostname]
+        if proc_name not in host.get("running_processes", []):
+            host.setdefault("running_processes", []).append(proc_name)
+
+        if self._threat_graph is not None:
+            pid = f"{hostname}:{proc_name}"
+            if pid not in self._threat_graph.processes:
+                self._threat_graph.add_process(ProcessNode(
+                    process_id=pid, hostname=hostname, process_name=proc_name
+                ))
+
+        impact_delta = {"ransomware": 0.15, "exfiltration": 0.08, "c2": 0.05}[payload_type]
+        self._state.business_impact = min(1.0, self._state.business_impact + impact_delta)
+
+        severity = {"ransomware": "critical", "exfiltration": "high", "c2": "high"}[payload_type]
+        alert_id = f"PAYLOAD-{uuid.uuid4().hex[:6].upper()}"
+        self._alert_queue.append({
+            "alert_id": alert_id,
+            "timestamp": "2024-01-01T00:00:00Z",
+            "source_host": hostname,
+            "severity": severity,
+            "threat_type": payload_type,
+            "description": (
+                f"{payload_type.capitalize()} payload deployed on {hostname}: {proc_name}"
+            ),
+            "ioc_indicators": [],
+            "subnet": host.get("subnet", "unknown"),
+            "is_acknowledged": False,
+        })
+        if self._threat_graph is not None:
+            self._threat_graph.add_alert(AlertNode(
+                alert_id=alert_id, severity=severity,
+                priority_score=18.0, source_host=hostname,
+            ))
+
+        return 0.0, f"red: deployed {payload_type} payload on {hostname}"
+
+    def _handle_evade_detection(self, action: EvadeDetection) -> tuple[float, str]:
+        """Red: apply a detection-evasion technique on a controlled host."""
+        hostname = action.hostname
+        technique = action.technique
+
+        if hostname not in self._host_index:
+            return 0.0, f"red: evade_detection — '{hostname}' not in network"
+        if self._host_index[hostname].get("status") != "compromised":
+            return 0.0, f"red: evade_detection — no shell on '{hostname}'"
+
+        if technique == "migrate_pid":
+            host = self._host_index[hostname]
+            malicious_procs = {
+                proc
+                for threat in self._task_def.get("attack_chain", [])
+                if hostname in threat.get("compromised_hosts", [])
+                for proc in threat.get("malicious_processes", [])
+            }
+            for i, proc in enumerate(list(host.get("running_processes", []))):
+                if proc in malicious_procs:
+                    new_name = f"svchost_{i}.exe"
+                    host["running_processes"][i] = new_name
+                    if self._threat_graph:
+                        old_pid = f"{hostname}:{proc}"
+                        if old_pid in self._threat_graph.processes:
+                            self._threat_graph.processes.pop(old_pid)
+                            new_pid = f"{hostname}:{new_name}"
+                            self._threat_graph.add_process(ProcessNode(
+                                process_id=new_pid, hostname=hostname,
+                                process_name=new_name,
+                            ))
+            return 0.0, f"red: migrated PIDs on {hostname} to blend with system processes"
+
+        if technique == "clear_logs":
+            before = len(self._alert_queue)
+            self._alert_queue = [
+                a for a in self._alert_queue
+                if a.get("source_host") != hostname
+            ]
+            removed = before - len(self._alert_queue)
+            return 0.0, f"red: cleared {removed} SIEM alert(s) from {hostname}"
+
+        return 0.0, f"red: evasion '{technique}' applied on {hostname}"
+
+    def _handle_pass_turn(self, action: PassTurn) -> tuple[float, str]:  # noqa: ARG002
+        """Red: remain stealthy, take no action."""
+        return 0.0, "red: pass_turn (stealth)"
+
+    def _get_red_action_target(self, action: Any) -> str:
+        """Extract a compact target string from a Red action for timeline logging."""
+        if isinstance(action, LateralPivot):
+            return f"{action.source_host}→{action.target_host}"
+        if isinstance(action, DeployPayload):
+            return f"{action.hostname}/{action.payload_type}"
+        if isinstance(action, EvadeDetection):
+            return f"{action.hostname}/{action.technique}"
+        return "—"
 
     # ===========================================================================
     # Helpers
@@ -1326,6 +1622,13 @@ class CyberSOCEnvironment(Environment):
         # Per-step partial reward dimensions for GRPO credit assignment
         reward_dimensions = self._compute_reward_dimensions()
 
+        # Red observation — only populated when it is Red's turn next
+        red_obs = (
+            self._generate_red_observation()
+            if self._state.active_turn == "red"
+            else None
+        )
+
         return SOCObservation(
             episode_id=self._state.episode_id or "",
             alert_queue=alerts,
@@ -1349,6 +1652,8 @@ class CyberSOCEnvironment(Environment):
             threat_graph_summary=threat_graph_summary,
             available_playbooks=[],
             reward_dimensions=reward_dimensions,
+            active_turn=self._state.active_turn,
+            red_observation=red_obs,
         )
 
     def _get_action_target(self, action: Any) -> str:
@@ -1383,18 +1688,38 @@ class CyberSOCEnvironment(Environment):
     # Adaptive Red Team + Step Rewards (Task 10)
     # ===========================================================================
 
-    def _build_red_observation(self, action_type: str, target: str) -> Dict[str, Any]:
-        """Compact red-side view used for imitation logs and neural policies."""
+    def _generate_red_observation(self) -> Dict[str, Any]:
+        """What the Red Team LLM sees: footholds it controls + Blue's last action.
+
+        Returned as the ``red_observation`` field in SOCObservation whenever
+        ``active_turn == 'red'``, so inference.py can feed it straight to the
+        Red LLM without a separate API call.
+        """
+        compromised_hosts = [
+            h for h, hd in self._host_index.items()
+            if hd.get("status") == "compromised"
+        ]
+
+        # Most recent Blue action from the timeline (exclude Red's own entries)
+        blue_actions_detected: List[Dict[str, Any]] = []
+        for entry in reversed(self._state.timeline):
+            action_type = entry.get("action_type", "")
+            if not action_type.startswith("red:"):
+                blue_actions_detected.append({
+                    "step": entry["step"],
+                    "action": action_type,
+                    "target": entry["target"],
+                    "result": entry["result"],
+                })
+                break  # Only the single most recent Blue action
+
         return {
             "episode_id": self._state.episode_id,
-            "task_id": self._state.task_id,
-            "step_count": self._state.step_count,
-            "blue_action_type": action_type,
-            "blue_action_target": target,
+            "round": self._state.step_count + 1,
+            "compromised_hosts": compromised_hosts,
+            "blue_actions_detected": blue_actions_detected,
             "active_threats": list(self._state.active_threats),
-            "contained_threats": list(self._state.contained_threats),
-            "business_impact": self._state.business_impact,
-            "adaptive_enabled": self._adaptive,
+            "business_impact": round(self._state.business_impact, 4),
         }
 
     def _log_red_decision(self, observation: Dict[str, Any], action: Dict[str, Any]) -> None:
@@ -1409,77 +1734,16 @@ class CyberSOCEnvironment(Environment):
                 pass
 
     def _apply_red_team_dynamics(self, action_type: str, target: str) -> None:
+        """Log a Red-side observation record (imitation data for offline SFT).
+
+        In FSP mode the Red LLM acts via explicit RedActionWrapper steps, so
+        this method only records observations rather than executing any attack.
         """
-        Route red-team behavior through deterministic logic (default) or neural policy.
-
-        When no neural policy is provided, behavior is unchanged from the legacy
-        deterministic `_adversary_react` implementation.
-        """
-        red_obs = self._build_red_observation(action_type=action_type, target=target)
-
-        if self._neural_red_policy is None:
-            result = self._adversary_react(action_type=action_type, target=target)
-            self._log_red_decision(
-                red_obs,
-                result or {"policy": "deterministic", "action_type": "noop"},
-            )
-            return
-
-        policy_fn = None
-        if callable(self._neural_red_policy):
-            policy_fn = self._neural_red_policy
-        elif hasattr(self._neural_red_policy, "act"):
-            policy_fn = self._neural_red_policy.act
-
-        if policy_fn is None:
-            result = self._adversary_react(action_type=action_type, target=target)
-            self._log_red_decision(
-                red_obs,
-                result or {"policy": "deterministic_fallback", "action_type": "noop"},
-            )
-            return
-
-        try:
-            proposed = policy_fn(red_obs)
-        except Exception as exc:
-            result = self._adversary_react(action_type=action_type, target=target)
-            self._log_red_decision(
-                red_obs,
-                {
-                    "policy": "neural_fallback",
-                    "action_type": "noop",
-                    "error": f"{type(exc).__name__}: {exc}",
-                },
-            )
-            if result is not None:
-                self._log_red_decision(red_obs, result)
-            return
-
-        if not isinstance(proposed, dict):
-            self._log_red_decision(
-                red_obs,
-                {"policy": "neural_invalid", "action_type": "noop"},
-            )
-            return
-
-        red_action_type = str(proposed.get("action_type", "noop"))
-        if red_action_type == "lateral_pivot":
-            source_host = str(proposed.get("source_host") or target)
-            outcome = self._execute_lateral_pivot(source_host=source_host)
-            self._log_red_decision(
-                red_obs,
-                {
-                    "policy": "neural",
-                    "action_type": "lateral_pivot",
-                    "source_host": source_host,
-                    "executed": bool(outcome and outcome.get("executed")),
-                },
-            )
-            return
-
+        red_obs = self._generate_red_observation()
         self._log_red_decision(
             red_obs,
-            {"policy": "neural", "action_type": red_action_type},
+            {"policy": "fsp_turn_engine", "action_type": "noop",
+             "blue_action": action_type, "blue_target": target},
         )
 
     def export_red_team_decisions(self) -> List[Dict[str, Any]]:
@@ -1578,123 +1842,8 @@ class CyberSOCEnvironment(Environment):
         })
 
     def _adversary_react(self, action_type: str, target: str) -> Optional[Dict[str, Any]]:
-        """Adaptive red team response — fires after each step when adaptive=True."""
-        if not self._adaptive:
-            return None
-
-        difficulty = self._task_def.get("difficulty") or getattr(self._state, "task_id", "easy")
-        # Reduced medium base probability for better GRPO credit assignment
-        pivot_probability = {"easy": 0.0, "medium": 0.3, "hard": 1.0}.get(difficulty, 0.0)
-
-        # Time-pressure escalation: attacker moves faster when uncontained and late in episode
-        if self._state.step_count > 10 and len(self._state.contained_threats) == 0:
-            pivot_probability += 0.2
-
-        # Trigger on isolate_segment OR kill_process (extended pivot trigger)
-        if action_type in ("isolate_segment", "kill_process") and pivot_probability > 0:
-            if self._rng.random() < pivot_probability:
-                source_host = target.split("/")[0] if "/" in target else target
-                return self._execute_lateral_pivot(source_host=source_host)
-        return {"policy": "deterministic", "action_type": "noop", "executed": False}
-
-    def _execute_lateral_pivot(self, source_host: str) -> Optional[Dict[str, Any]]:
-        """Copy-not-move lateral pivot: spread to an adjacent healthy host.
-
-        Rubric is capped at MAX_RUBRIC_ITEMS to prevent competent agents from
-        being penalised by an impossible-to-complete rubric.
-        """
-        MAX_RUBRIC_ITEMS = 12
-        graph = self._threat_graph
-        if graph is None:
-            return None
-
-        # Rubric cap: stop pivoting once live_requirements is full
-        if self._live_requirements:
-            current_items = (
-                len(self._live_requirements.get("must_kill", []))
-                + len(self._live_requirements.get("must_isolate", []))
-            )
-            if current_items >= MAX_RUBRIC_ITEMS:
-                return {"policy": "deterministic", "action_type": "lateral_pivot", "executed": False}
-
-        adjacent_hosts = [
-            e.target_id for e in graph.edges
-            if e.source_id == source_host and e.target_id in graph.hosts
-            and graph.hosts[e.target_id].status == "healthy"
-        ]
-        if not adjacent_hosts:
-            # Try graph hosts first, then fall back to full host_index
-            healthy_hosts = [
-                h for h, node in graph.hosts.items()
-                if node.status == "healthy" and h != source_host
-            ]
-            if not healthy_hosts:
-                # Expand search to the full network
-                healthy_hosts = [
-                    h for h, hd in self._host_index.items()
-                    if hd.get("status", "online") not in ("compromised", "isolated")
-                    and h != source_host
-                    and h not in graph.hosts
-                ]
-            if not healthy_hosts:
-                return {"policy": "deterministic", "action_type": "lateral_pivot", "executed": False}
-            adjacent_hosts = healthy_hosts
-
-        dest_host = self._rng.choice(adjacent_hosts)
-
-        # Ensure destination host is in graph
-        if dest_host not in graph.hosts:
-            hd = self._host_index.get(dest_host, {})
-            graph.add_host(HostNode(
-                hostname=dest_host,
-                subnet=hd.get("subnet", "corporate"),
-                business_criticality="medium",
-                status="healthy",
-            ))
-
-        source_processes = [p for p in graph.processes.values() if p.hostname == source_host]
-        if not source_processes:
-            return {"policy": "deterministic", "action_type": "lateral_pivot", "executed": False}
-        original = source_processes[0]
-
-        new_pid = str(uuid.uuid4())[:8]  # uuid imported at module level
-        new_process = ProcessNode(
-            process_id=f"{dest_host}:{new_pid}",
-            hostname=dest_host,
-            process_name=original.process_name,
-            killed=False,
-        )
-        graph.add_process(new_process)
-
-        graph.add_edge(Edge(
-            edge_type="pivoted_from",
-            source_id=dest_host,
-            target_id=source_host,
-            evidence={"trigger_action": "isolate_segment", "step": self._state.step_count},
-        ))
-
-        if self._live_requirements is None:
-            self._live_requirements = {}
-        self._live_requirements.setdefault("must_kill", []).append(
-            f"{dest_host}:{original.process_name}"
-        )
-        self._live_requirements.setdefault("must_isolate", []).append(dest_host)
-
-        new_alert = AlertNode(
-            alert_id=f"PIVOT-{new_pid}",
-            severity="critical",
-            priority_score=15.0,
-            source_host=dest_host,
-        )
-        graph.add_alert(new_alert)
-        return {
-            "policy": "deterministic",
-            "action_type": "lateral_pivot",
-            "executed": True,
-            "source_host": source_host,
-            "dest_host": dest_host,
-            "alert_id": new_alert.alert_id,
-        }
+        """Legacy hook — disabled; Red Team now acts via explicit RedActionWrapper steps."""
+        return None
 
     @property
     def state(self) -> SOCState:

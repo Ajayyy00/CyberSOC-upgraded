@@ -234,6 +234,17 @@ class SOCObservation(Observation):
             "Keys match grade_breakdown (threat_containment, ioc_blocking, etc.)."
         ),
     )
+    active_turn: str = Field(
+        default="blue",
+        description="Whose turn it is next: 'blue' or 'red'. Used by FSP inference loops.",
+    )
+    red_observation: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Red Team's current view of the world (populated when active_turn='red'). "
+            "Contains compromised_hosts and blue_actions_detected."
+        ),
+    )
 
 
 # =============================================================================
@@ -345,6 +356,80 @@ class QuarantineFile(Action):
     file_path: str = Field(..., description="File path to quarantine")
 
 
+# =============================================================================
+# Red Team Actions (FSP — Fictitious Self-Play)
+# =============================================================================
+
+class LateralPivot(Action):
+    """Red Team: move laterally from a compromised host to a new target."""
+    type: Literal["lateral_pivot"] = Field(default="lateral_pivot")
+    source_host: str = Field(..., description="Already-compromised host used as the pivot point")
+    target_host: str = Field(..., description="Destination host to compromise")
+
+
+class DeployPayload(Action):
+    """Red Team: deploy a malicious payload on a host Red already controls."""
+    type: Literal["deploy_payload"] = Field(default="deploy_payload")
+    hostname: str = Field(..., description="Compromised host to deploy payload on")
+    payload_type: Literal["ransomware", "exfiltration", "c2"] = Field(
+        ..., description="Class of payload to deploy"
+    )
+
+
+class EvadeDetection(Action):
+    """Red Team: apply an evasion technique on a compromised host."""
+    type: Literal["evade_detection"] = Field(default="evade_detection")
+    hostname: str = Field(..., description="Compromised host to apply evasion on")
+    technique: Literal["migrate_pid", "clear_logs"] = Field(
+        ...,
+        description=(
+            "migrate_pid: rename running malicious processes to blend with system names; "
+            "clear_logs: remove SIEM alerts originating from this host"
+        ),
+    )
+
+
+class PassTurn(Action):
+    """Red Team: remain stealthy and take no action this turn."""
+    type: Literal["pass_turn"] = Field(default="pass_turn")
+
+
+# Constant used by dashboard_server and inference to route payloads
+RED_ACTION_TYPES: frozenset = frozenset(
+    {"lateral_pivot", "deploy_payload", "evade_detection", "pass_turn"}
+)
+
+# Discriminated union of all Red actions
+RedAction = Annotated[
+    Union[LateralPivot, DeployPayload, EvadeDetection, PassTurn],
+    Field(discriminator="type"),
+]
+
+
+class RedActionWrapper(Action):
+    """Wrapper for Red Team actions — mirrors SOCActionWrapper for the WS/HTTP layer."""
+
+    type: str = Field(..., description="Red action type discriminator")
+    model_config = ConfigDict(extra="allow")
+
+    def to_typed_action(self):
+        """Deserialize to the correctly-typed Red action."""
+        data = self.model_dump(exclude={"metadata"})
+        action_map = {
+            "lateral_pivot": LateralPivot,
+            "deploy_payload": DeployPayload,
+            "evade_detection": EvadeDetection,
+            "pass_turn": PassTurn,
+        }
+        cls = action_map.get(data["type"])
+        if cls is None:
+            raise ValueError(
+                f"Unknown red action type: {data['type']}. "
+                f"Valid types: {list(action_map)}"
+            )
+        return cls(**data)
+
+
 # Discriminated union of all SOC actions
 SOCAction = Annotated[
     Union[
@@ -437,4 +522,8 @@ class SOCState(State):
     live_requirements: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Mutable copy of containment_requirements (for adaptive grading).",
+    )
+    active_turn: str = Field(
+        default="blue",
+        description="Current active turn in the FSP engine: 'blue' or 'red'.",
     )
