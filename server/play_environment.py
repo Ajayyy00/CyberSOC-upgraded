@@ -407,8 +407,24 @@ class CyberSOCEnvironment(Environment):
         action: SOCActionWrapper,
     ) -> SOCObservation:
         """Execute one Blue turn."""
-        # Convert wrapper to typed action
-        typed_action = action.to_typed_action()
+        # Convert wrapper to typed action — gracefully handle hallucinated
+        # action types or wrong parameters from the LLM instead of crashing.
+        try:
+            typed_action = action.to_typed_action()
+        except Exception as exc:
+            # Return a negative reward signal so GRPO can learn from the mistake
+            penalty = -0.2
+            self._state.total_reward += penalty
+            self._state.timeline.append({
+                "step": self._state.step_count + 1,
+                "action_type": getattr(action, "type", "unknown"),
+                "target": "N/A",
+                "result": f"INVALID_ACTION: {exc}",
+                "reward": penalty,
+            })
+            self._state.step_count += 1
+            return self._build_observation(reward=penalty, done=False)
+
         args = typed_action.model_dump(exclude={"metadata", "type"})
 
         # Pre-flight validation — penalise without consuming a step
