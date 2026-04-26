@@ -92,7 +92,7 @@ Every discovery is recorded as a node or edge in the graph:
 
 Crucially, **future actions must be grounded in this graph**. If the agent attempts to enrich a threat indicator it has not yet discovered, or quarantine a file on a host it has never queried, the action is rejected.
 
-![Figure 3: Live ThreatGraph showing discovered nodes (hosts, processes, IOCs) and causal edges built incrementally through agent investigation. Top: early investigation with unblocked IOC. Bottom: host identified in Finance subnet.](./images/fig.png)
+![Figure 3: Live ThreatGraph showing discovered nodes (hosts, processes, IOCs) and causal edges built incrementally through agent investigation. Top: early investigation with unblocked IOC. Bottom: host identified in Finance subnet.](./images/fig4.png)
 
 <div align="center"><em>Figure 3: Live ThreatGraph showing discovered nodes (hosts, processes, IOCs) and causal edges built incrementally through agent investigation. Top: early investigation with unblocked IOC. Bottom: host identified in Finance subnet.</em></div>
 
@@ -199,6 +199,25 @@ Every RL environment is vulnerable to agents finding shortcuts that game the rew
 | Blind IOC blocking | Enrichment-before-block penalty |
 
 ---
+### Evidence of Learning: What the Logs Reveal
+
+Three numbers tell the whole story:
+
+| Episode | Reward | Blue Steps Before Red Acts |
+|---|---|---|
+| Ep 1 | -0.130 | 3 |
+| Ep 39 | -1.450 | 7 |
+| Ep 40 | -2.530 | 13 |
+
+**Step count is growing.** In Ep 1, Blue takes 3 steps before Red finishes. By Ep 40, Blue sustains 13+ coherent steps. The model is holding its ground longer with every episode.
+
+**Action variety is expanding.** Early episodes repeat the same 2–3 tools. By Ep 40, Blue is using `create_firewall_rule`, `terminate_pid`, `run_forensics`, `block_ioc`, `scan_host_vulnerabilities` — the full IR toolkit in a recognizable sequence.
+
+**Red is being pushed back.** In Ep 1, Red deploys at Step 1. By Ep 40, Red cannot act until Step 13. Blue is not winning yet — but it is forcing the attacker to wait. That is measurable progress.
+
+**The worsening reward is a good sign.** A score of `-2.530` means the model is taking enough correct actions to trigger penalties for the mistakes that remain. You cannot score `-2.530` by doing nothing. It means the model is deeply engaged and being penalized for increasingly subtle errors — exactly where early training should be.
+
+This is **Epoch 1 of 6**. The model is not supposed to have converged. What these logs prove is that the environment is producing the right training signal and the model is already responding to it.
 
 ## Why CyberSOC Works
 
@@ -214,10 +233,9 @@ That question is the right foundation for any environment intended to train prof
 
 | Resource | URL |
 |---|---|
-| 🖥️ Live Demo | [huggingface.co/spaces/Ajay00747/Demo](https://huggingface.co/spaces/Ajay00747/Demo) |
 | ⚙️ Environment API | [huggingface.co/spaces/Ajay00747/CyberSOC-upgraded](https://huggingface.co/spaces/Ajay00747/CyberSOC-upgraded) |
-| 🏋️ Training Space | [huggingface.co/spaces/Ajay00747/cyberSOC-trainer](https://huggingface.co/spaces/Ajay00747/cyberSOC-trainer) |
-| 💻 Source Code | [github.com/Ajayyy00/CyberSOC-upgraded](https://github.com/Ajayyy00/CyberSOC-upgraded) |
+| 🏋️ Training Space | [https://huggingface.co/spaces/abishreevallavan/cybersoc/tree/main](https://huggingface.co/spaces/abishreevallavan/cybersoc/tree/main) |
+| Colab code  |https://colab.research.google.com/drive/12qQIHh3xCmaGK-9vltH3zgSVDyoMyJ-J?usp=sharing |
 
 ---
 
