@@ -255,14 +255,18 @@ class CyberSOCEnvironment(Environment):
             Initial SOCObservation with alert queue and network state.
         """
         task_id = kwargs.get("task_id", "easy")
-        self._rng = random.Random(hash(task_id))
+        # Mix per-episode entropy so GRPO sees diverse prompts across the batch.
+        # episode_id is caller-supplied; if absent we generate one so each reset
+        # gets a unique rng seed even when task_id is the same.
+        eid = episode_id or str(uuid4())
+        self._rng = random.Random(hash(task_id) ^ hash(eid))
         self._task_def = get_task(task_id)
         self._recent_actions = []  # reset stall detector
 
-        # Build deterministic network (cached per task for GRPO throughput)
+        # Network topology is seeded per episode so prompt diversity is preserved.
         if not hasattr(CyberSOCEnvironment, "_network_cache"):
             CyberSOCEnvironment._network_cache = {}
-        cache_key = task_id
+        cache_key = (task_id, eid)
         if cache_key in CyberSOCEnvironment._network_cache:
             self._network = copy.deepcopy(CyberSOCEnvironment._network_cache[cache_key])
         else:

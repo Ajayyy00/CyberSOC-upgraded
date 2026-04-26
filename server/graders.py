@@ -64,11 +64,8 @@ def grade_episode(
     killed_processes = list(getattr(state, "killed_processes", []) or [])
     blocked_iocs = list(getattr(state, "blocked_iocs", []) or [])
     isolated_subnets = list(getattr(state, "isolated_subnets", []) or [])
-    scanned_hosts = list(getattr(state, "scanned_hosts", []) or [])
     enriched_iocs = list(getattr(state, "enriched_iocs", []) or [])
     correlated_pairs = list(getattr(state, "correlated_alert_pairs", []) or [])
-    triggered_playbooks = list(getattr(state, "triggered_playbooks", []) or [])
-
     # ---- 1. threat_containment ----
     if must_kill:
         matched = 0
@@ -106,7 +103,8 @@ def grade_episode(
         h for h, node in graph.hosts.items() if node.status == "compromised"
     ]
     if compromised_hosts:
-        examined = sum(1 for h in compromised_hosts if h in scanned_hosts)
+        forensics_run = list(getattr(state, "forensics_run", []) or [])
+        examined = sum(1 for h in compromised_hosts if h in forensics_run)
         breakdown["forensic_investigation"] = examined / len(compromised_hosts)
     else:
         breakdown["forensic_investigation"] = 1.0
@@ -257,18 +255,9 @@ def grade_episode(
     breakdown["business_impact"] = base
 
     # ---- 8. step_efficiency ----
-    eff_base = 1.0 if triggered_playbooks else 0.5
-    playbook_bonus_total = 0.0
-    for _ in triggered_playbooks:
-        delta = _capped(0.10)
-        bonuses.append({
-            "type": "playbook_triggered",
-            "delta": delta,
-            "detail": "SOAR playbook used",
-        })
-        playbook_bonus_total += delta
-    playbook_bonus_total = min(playbook_bonus_total, 0.30)
-    eff_base += playbook_bonus_total
+    # triggered_playbooks is not yet tracked in SOCState, so start at 1.0
+    # and only penalise step overruns.
+    eff_base = 1.0
 
     steps_used = len(episode_actions)
     over = max(0, steps_used - 15)

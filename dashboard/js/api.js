@@ -55,7 +55,7 @@ const API = (() => {
       return `ws://localhost:8000/ws/${_sessionId}`;
     }
     const { protocol, hostname, port } = window.location;
-    if (protocol === 'file:') return `ws://localhost:8000/ws/${_sessionId}`;
+    if (protocol === 'file:') return `wss://ajay00747-cybersoc-upgraded.hf.space/ws/${_sessionId}`;
     const wsProto = protocol === 'https:' ? 'wss:' : 'ws:';
     const host    = port ? `${hostname}:${port}` : hostname;
     return `${wsProto}//${host}/ws/${_sessionId}`;
