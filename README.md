@@ -525,11 +525,9 @@ Per guide §17, responsibilities are split across three functional roles to exec
 | **Adaptive Red Team** | Attacker reacts to defender actions — lateral pivots and reinfection |
 | **SOAR Playbooks** | Prerequisite-gated automated response workflows |
 | **3-Gate Validation** | Phase whitelist + schema + graph-groundedness prevents invalid actions |
-| **Episode Sandbox** | State integrity protection with hash-based tampering detection |
 | **Live GRPO Signals** | Per-step reward dimensions for RL credit assignment |
 | **Anti-Gaming** | Blind-blocking penalties, over-isolation cap, idempotent step rewards (0.40 cap) |
 | **Real-time Dashboard** | D3.js threat graph with pivot animations and 10-dim radar chart |
-| **Hotseat Multiplayer** | Human Red Team player via in-dashboard toolkit; FSP backend; per-turn UI lock |
 | **Stall Punishment** | 3 consecutive passive Blue actions triggers ransomware deploy + 15 % autonomous pivot |
 | **Emergency Gate** | `isolate_segment` in triage requires a critical alert; `UNJUSTIFIED_EMERGENCY` → -0.15 penalty |
 | **External Intel Feed** | `task_def.external_intel_feed` IOCs injected at reset — immediately blockable/enrichable |
