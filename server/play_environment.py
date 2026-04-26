@@ -561,16 +561,6 @@ class CyberSOCEnvironment(Environment):
             if last_three[0] == last_three[1] == last_three[2]:
                 reward -= 0.05
 
-        # Business impact grows each step (attacker progresses)
-        if not self._state.is_done:
-            impact_rate = self._task_def.get("impact_per_step", 0.02)
-            active_ratio = len(self._state.active_threats) / max(
-                1, len(self._task_def.get("attack_chain", []))
-            )
-            self._state.business_impact = min(
-                1.0, self._state.business_impact + impact_rate * active_ratio
-            )
-
         # Round label: step_count+1 = current round being played (not yet closed)
         round_label = self._state.step_count + 1
 
@@ -1863,6 +1853,10 @@ class CyberSOCEnvironment(Environment):
             # pass_turn → no graph mutation needed
 
             self._log_red_decision(red_obs, action_dict)
+            if atype in ("lateral_pivot", "deploy_payload"):
+                _ir = self._task_def.get("impact_per_step", 0.02)
+                _ar = len(self._state.active_threats) / max(1, len(self._task_def.get("attack_chain", [])))
+                self._state.business_impact = min(1.0, self._state.business_impact + _ir * _ar)
         else:
             # Deterministic fallback for imitation warm-start (adaptive=True path)
             det_action = self._deterministic_red_policy(action_type, target, red_obs)
@@ -1887,6 +1881,10 @@ class CyberSOCEnvironment(Environment):
                         )
                     )
             self._log_red_decision(red_obs, det_action)
+            if atype in ("lateral_pivot", "deploy_payload"):
+                _ir = self._task_def.get("impact_per_step", 0.02)
+                _ar = len(self._state.active_threats) / max(1, len(self._task_def.get("attack_chain", [])))
+                self._state.business_impact = min(1.0, self._state.business_impact + _ir * _ar)
 
     def _deterministic_red_policy(
         self, blue_action: str, blue_target: str, red_obs: Dict[str, Any]

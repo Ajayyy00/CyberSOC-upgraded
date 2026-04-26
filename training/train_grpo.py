@@ -65,7 +65,7 @@ class EnvServer:
         env = os.environ.copy()
         if self.frozen_opponent:
             env["CYBERSOC_FROZEN_RED_CHECKPOINT"] = self.frozen_opponent
-        env.setdefault("CYBERSOC_ADAPTIVE", "1")
+        env.setdefault("CYBERSOC_ADAPTIVE", "0")
         self._proc = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
@@ -121,13 +121,9 @@ SYSTEM_PROMPT = textwrap.dedent("""
       {"type": "block_ioc",                "ioc_value": "VALUE", "ioc_type": "ip|domain|hash"}
       {"type": "kill_process",             "hostname": "HOSTNAME", "process_name": "PROCESS"}
       {"type": "isolate_segment",          "subnet": "SUBNET", "reason": "REASON"}
-      {"type": "trigger_playbook",         "playbook_name": "NAME", "target": "HOSTNAME"}
       {"type": "submit_containment_plan",  "plan": [
           {"threat_id": "T-ID", "actions_taken": ["action1"], "root_cause": "...", "confidence": 0.9}
         ], "executive_summary": "TEXT"}
-
-    PLAYBOOK NAMES: ransomware_containment | c2_disruption | lateral_movement_lockdown |
-                    phishing_response | data_exfil_stop
 
     STRATEGY (evidence-gated — actions only score if prior evidence justifies them):
     1. TRIAGE: correlate_alerts on related alerts (shared hosts or IOC indicators)

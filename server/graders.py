@@ -327,6 +327,12 @@ def grade_episode(
             graph.compute_evidence_confidence(primary, rubric_item_count=rubric_items)
         )
 
+    # Propagate negligence into dimension scores so reward functions see penalised
+    # values directly (not just in final_score).
+    if breakdown.get("threat_containment", 0.0) == 0.0 and final_plan is not None:
+        breakdown["business_impact"] = breakdown.get("business_impact", 0.0) * 0.1
+        breakdown["step_efficiency"] = breakdown.get("step_efficiency", 0.0) * 0.1
+
     # Final weighted score — business_impact excluded from weighted sum and applied
     # instead as a direct negative modifier so a maxed doomsday clock is always
     # mathematically worse than any combination of poor-but-active play.
