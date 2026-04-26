@@ -273,7 +273,7 @@ const API = (() => {
 
     // Send a step message, push parsed observation into the store, return it.
     async step(action) {
-      const msg    = await _send({ type: 'step', ...action });
+      const msg    = await _send({ type: 'step', action: action });
       const parsed = _parseResponse(msg);
       _store?.applyObservation(parsed, action);
       return parsed;
