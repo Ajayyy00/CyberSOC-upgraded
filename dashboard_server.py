@@ -192,14 +192,17 @@ async def ws_session(websocket: WebSocket, session_id: str):
 
                 try:
                     from models import SOCActionWrapper, RedActionWrapper, RED_ACTION_TYPES  # noqa: PLC0415
-                    action_fields = {k: v for k, v in msg.items() if k != "type"}
-                    action_type_str = action_fields.get("type", "")
+                    action_dict = msg.get("action")
+                    if not action_dict:
+                        raise ValueError("Missing 'action' dictionary in step payload")
+
+                    action_type_str = action_dict.get("type", "")
 
                     # Route to Red or Blue wrapper based on action type
                     if action_type_str in RED_ACTION_TYPES:
-                        action = RedActionWrapper.model_validate(action_fields)
+                        action = RedActionWrapper.model_validate(action_dict)
                     else:
-                        action = SOCActionWrapper.model_validate(action_fields)
+                        action = SOCActionWrapper.model_validate(action_dict)
 
                     obs = await _run(env.step, action)
                     await websocket.send_json({
