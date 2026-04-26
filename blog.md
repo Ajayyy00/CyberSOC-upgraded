@@ -51,7 +51,9 @@ A critical design choice is **deterministic scenario generation**: each `task_id
 
 The figure below shows CyberSOC as a closed-loop pipeline — from episode generation through agent interaction, validation, adaptive adversary, reward computation, and GRPO training.
 
-![Figure 1: End-to-end CyberSOC workflow — episode generation, agent interaction, 3-gate validation, adaptive Red Team, 10-dimensional reward signals, and GRPO training loop.](./images/figure1_workflow.png)
+![Figure 1: End-to-end CyberSOC workflow — episode generation, agent interaction, 3-gate validation, adaptive Red Team, 10-dimensional reward signals, and GRPO training loop.](./images/fig1.png)
+
+<div align="center"><em>Figure 1: End-to-end CyberSOC workflow.</em></div>
 
 Each episode begins with task generation and alert injection. The agent observes alerts through a SIEM-style interface and interacts using structured JSON actions. These actions are validated, executed, and their effects recorded in a central **ThreatGraph** — a live causal graph representing the agent's evolving understanding of the attack. The episode concludes when the agent submits a containment plan or exhausts its step budget. Results feed into the GRPO training loop to update the model — creating a continuous feedback cycle where every episode improves the agent's reasoning for the next.
 
@@ -74,7 +76,9 @@ The **Blue agent** is required to follow the natural incident response lifecycle
 
 Attempting to skip phases is both penalized and blocked. Submitting a containment plan before completing investigation, for example, results in a **−0.10 penalty** and the action is rejected entirely. The model cannot skip to the answer — it must earn it by doing the work.
 
-![Figure 2: Phase state machine showing valid transitions and penalty conditions for each incident response stage.](./images/figure2_phase_machine.png)
+![Figure 2: Phase state machine showing valid transitions and penalty conditions for each incident response stage.](./images/fig2.png)
+
+<div align="center"><em>Figure 2: Phase state machine showing valid transitions and penalty conditions for each incident response stage.</em></div>
 
 ---
 
@@ -88,7 +92,9 @@ Every discovery is recorded as a node or edge in the graph:
 
 Crucially, **future actions must be grounded in this graph**. If the agent attempts to enrich a threat indicator it has not yet discovered, or quarantine a file on a host it has never queried, the action is rejected.
 
-![Figure 3: Live ThreatGraph showing discovered nodes (hosts, processes, IOCs) and causal edges built incrementally through agent investigation. Top: early investigation with unblocked IOC. Bottom: host identified in Finance subnet.](./images/figure3_threatgraph.png)
+![Figure 3: Live ThreatGraph showing discovered nodes (hosts, processes, IOCs) and causal edges built incrementally through agent investigation. Top: early investigation with unblocked IOC. Bottom: host identified in Finance subnet.](./images/fig.png)
+
+<div align="center"><em>Figure 3: Live ThreatGraph showing discovered nodes (hosts, processes, IOCs) and causal edges built incrementally through agent investigation. Top: early investigation with unblocked IOC. Bottom: host identified in Finance subnet.</em></div>
 
 This graph-groundedness constraint eliminates one of the most persistent failure modes in LLM-based agents: **confident hallucination**. The model cannot guess or fabricate threat intelligence — it must actually run the investigation to uncover the information it needs to act on.
 
@@ -122,7 +128,9 @@ The model learns these dependencies through repeated interaction, gradually inte
 
 A deterministic Red Team creates a hard ceiling on Blue's capability. When the attacker follows a fixed script, Blue memorizes the pattern rather than learning to investigate. CyberSOC eliminates this by training **both Blue and Red as full RL agents** in a zero-sum multi-agent loop. Red evolves through four stages, constantly forcing Blue to develop genuine reasoning rather than pattern recognition.
 
-![Figure 4: Four-stage Red Team training curriculum — from imitation warm-start through PFSP prioritized sampling, producing a Blue agent that generalizes rather than memorizes.](./images/figure4_red_team_curriculum.png)
+![Figure 4: Four-stage Red Team training curriculum — from imitation warm-start through PFSP prioritized sampling, producing a Blue agent that generalizes rather than memorizes.](./images/fig3.png)
+
+<div align="center"><em>Figure 4: Four-stage Red Team training curriculum.</em></div>
 
 ### Stage 1 — Imitation Warm-Start
 Decisions across 1,000 scenarios are logged and used to SFT-train a language model, producing `red_v0`. This gives Red a meaningful baseline before any RL gradient is applied.
