@@ -148,23 +148,25 @@ async def ws_session(websocket: WebSocket, session_id: str):
 
             # ── reset ────────────────────────────────────────────────────────
             if msg_type == "reset":
-                task_id: str = msg.get("task_id", "hard")
+                task_id = msg.get("task_id", "easy")
+                fsp_mode = msg.get("fsp_mode", False)
+
+                # If this session already had an env, clean it up first
+                with _sessions_lock:
+                    old = _sessions.pop(session_id, None)
+
+                # Close old env outside the lock (blocking -> executor)
+                if old is not None and hasattr(old, "close"):
+                    try:
+                        await _run(old.close)
+                    except Exception:
+                        pass
+
+                env = CyberSOCEnvironment(fsp_mode=fsp_mode)
+                with _sessions_lock:
+                    _sessions[session_id] = env
+
                 try:
-                    # Swap out old env atomically
-                    with _sessions_lock:
-                        old = _sessions.pop(session_id, None)
-
-                    # Close old env outside the lock (blocking -> executor)
-                    if old is not None and hasattr(old, "close"):
-                        try:
-                            await _run(old.close)
-                        except Exception:
-                            pass
-
-                    env = CyberSOCEnvironment(fsp_mode=True)
-                    with _sessions_lock:
-                        _sessions[session_id] = env
-
                     obs = await _run(env.reset, task_id=task_id)
                     await websocket.send_json({
                         "type": "reset_ok",
