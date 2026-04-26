@@ -1,548 +1,530 @@
----
-title: CyberSOC Upgraded RLVR
-emoji: 🛡️
-colorFrom: red
-colorTo: purple
-sdk: docker
-pinned: false
----
+# CyberSOC: Asymmetric Dual-Model Reinforcement Learning for Autonomous Incident Response
 
-# CyberSOC: Complete Project Review
+CyberSOC is an autonomous, AI-driven Security Operations Center built for the Meta OpenEnv Hackathon. It pits two Large Language Models against each other inside a simulated 500-node enterprise network: a lightweight Red Team attacker and a heavyweight Blue Team defender that learns through Reinforcement Learning.
 
-> **New — Hotseat Multiplayer Mode**: A human can now play the Red Team live from the dashboard. After every Blue action the UI pauses, enables the **🔴 Red Team Toolkit**, shows a `BLUE / RED TEAM TURN` indicator in the header, and resumes Blue auto-play only after the Red player submits their move. Backend now runs in FSP (Fictitious Self-Play) mode by default.
-
-> **New — 4 Architectural Upgrades**: Lazy Adversary (stall punishment + 15 % autonomous pivot), Rigid Bureaucracy emergency-isolation gate (UNJUSTIFIED\_EMERGENCY penalty), Siloed Intelligence external intel feed injection, and Depressed Analyst doomsday-clock direct modifier + negligence penalty.
-
-## 1. Project Overview — RLVR Positioning
-
-CyberSOC (CyberSOCEnv) is an **RLVR-stage reinforcement learning environment** that sits at the final rung of the model-maturation arc: **Random Init → Pretraining → SFT/IFT → Preference FT → RLVR**. It does not pretrain, supervise, or preference-align — it consumes a base model that has already been through those stages and turns its agentic actions into a dense, verifiable, 10-dimensional reward signal that GRPO can train on.
-
-It assumes a base model that has already been SFT-aligned. The environment itself does not perform SFT; it is an **RL-only artifact**. This satisfies **Daniel's "Law of RL"**: *The base model must get non-zero reward on Easy before it can meaningfully learn Hard.*
-
-**Built for**: The OpenEnv Hackathon (Meta Platforms)
-**Framework**: OpenEnv (Meta's RL environment framework)
-**License**: BSD-style (Meta Platforms, Inc.)
-
-### Guide Alignment Summary
-
-| Guide Section | Requirement | Our Implementation |
-|---|---|---|
-| §1 | Step-by-step, programmatic verification, hard-but-possible | 10 typed actions, 10-dim deterministic grader, Easy→Hard curriculum |
-| §4 | Design env before trainer | Env designed first; reset/step/state as first-class artifacts |
-| §6 | Keep task simple at first | 1000+ scenarios across 3 difficulty tiers enable curriculum learning |
-| §7 | Multiple independent reward functions | 10 dimensions consumed as `reward_funcs=[...]` by GRPOTrainer |
-| §8 | Protect against reward hacking | 8 distinct defenses mapped to guide's attack vectors |
-| §10 | Right training stack | Unsloth (QLoRA) + TRL (GRPO) + OpenEnv (transport) |
-| §11 | Prefer GRPO/RLVR | RLVR throughout; every reward is deterministic code (zero LLM-as-judge) |
-| §12 | Keep inference fast | Graph-delta injection + sparse nodes = rollout-latency optimizations |
-| §14 | Scale only after stable | All 9 components passed integration before any GRPO rollout |
+The project demonstrates that Asymmetric Fictitious Self-Play is viable on consumer-grade GPU hardware. By combining Unsloth-accelerated QLoRA, a custom micro-batch GRPO loop, and a 10-dimensional reward grading system hardened against reward hacking, we trained a SOC analyst AI that learned to surgically contain a live, thinking adversary -- not through scripted rules, but through trial-and-error reinforcement.
 
 ---
 
-## 2. Core Idea & Innovation
+## Table of Contents
 
-### The Problem
-Traditional cybersecurity training environments use static puzzles with fixed answers. Real SOC work requires dynamic reasoning under time pressure with incomplete information.
-
-### The Solution
-CyberSOC creates a **fully dynamic, deterministic SOC simulation** with:
-
-1. **Procedural Scenario Generation** — 1,003 unique attack scenarios (3 curated + 1,000 generated) from seed-based deterministic generation. Same seed = same scenario, enabling reproducible RL training.
-2. **13 Threat Categories** — Ransomware, Phishing, Credential Theft, Lateral Movement, C2 Communication, Privilege Escalation, Data Exfiltration, Cryptomining, Supply Chain, Insider Threat, Webshell, Botnet, Malware.
-3. **Adaptive Red Team** — An adversary that reacts to agent actions: if you isolate a host, the attacker may pivot laterally. If you kill a process without blocking IOCs, it may reinfect with a `_v2` variant.
-4. **10-Dimensional Grading** — Not a binary pass/fail. Agents are scored across 10 weighted dimensions for nuanced RL credit assignment. **Zero LLM-as-a-judge.**
-5. **Business Continuity Constraints** — Rash actions (isolating clean subnets, killing legitimate processes) cause business downtime penalties.
-6. **TRL GRPO Integration** — 10 reward functions that plug directly into Hugging Face's TRL `GRPOTrainer` for RL fine-tuning.
+1. [Architecture Overview](#architecture-overview)
+2. [System Flow](#system-flow)
+3. [Models and AI Techniques](#models-and-ai-techniques)
+4. [Training Pipeline](#training-pipeline)
+5. [Unsloth and Optimization](#unsloth-and-optimization)
+6. [10-Dimensional Reward System](#10-dimensional-reward-system)
+7. [Anti-Cheating, Anti-Corruption, Anti-Reward-Hacking](#anti-cheating-anti-corruption-anti-reward-hacking)
+8. [The RL Journey: From Panic to Precision](#the-rl-journey-from-panic-to-precision)
+9. [Innovations](#innovations)
+10. [Agent Roles and Real-World Inspirations](#agent-roles-and-real-world-inspirations)
+11. [Real-World Positives](#real-world-positives)
+12. [Training Phase Positives](#training-phase-positives)
+13. [Project Structure](#project-structure)
+14. [Getting Started](#getting-started)
 
 ---
 
-## 3. Architecture
+## Architecture Overview
 
-```
-MetaRound2/
-├── models.py              # Pydantic data models (Observation, Action, State)
-├── client.py              # WebSocket client for agent interaction
-├── __init__.py            # Package exports
-├── inference.py           # LLM baseline inference script
-├── dashboard_server.py    # Dashboard + API server launcher
-├── pyproject.toml         # Python package config
-├── Dockerfile             # HuggingFace Spaces deployment
-├── openenv.yaml           # 1003 task manifest
-├── validate_submission.sh # Hackathon submission validator
-│
-├── server/                # Backend environment engine
-│   ├── app.py             # FastAPI application entry point
-│   ├── play_environment.py # Core environment (1284 lines)
-│   ├── tasks.py           # Hand-crafted task definitions (easy/medium/hard)
-│   ├── task_generator.py  # Procedural generation engine (1000+ tasks)
-│   ├── graders.py         # 10-dimensional grading system
-│   ├── threat_graph.py    # Typed knowledge graph
-│   ├── soar_playbooks.py  # 5 SOAR playbook definitions
-│   ├── action_validation.py # 3-gate action validation middleware
-│   ├── tool_router.py     # Phase state machine + triage solver
-│   ├── episode_sandbox.py # Wall-clock + step-limit guard
-│   ├── visualize_graph.py # PNG graph renderer (matplotlib/networkx)
-│   └── Dockerfile         # Multi-stage Docker build
-│
-├── training/              # RL training integration
-│   └── reward_funcs.py    # 10 TRL GRPO reward functions
-│
-├── dashboard/             # Real-time web dashboard
-│   ├── index.html         # Main HTML (6 panels)
-│   ├── css/styles.css     # Dark theme CSS (25KB)
-│   └── js/
-│       ├── app.js         # Main dashboard logic (45KB)
-│       ├── graphs.js      # D3.js threat graph + Chart.js (31KB)
-│       ├── api.js         # REST API client
-│       └── animations.js  # Micro-animations & effects
-│
-└── tests/                 # 10 test files + integration suite
-    ├── test_integration.py
-    └── test_task1.py ... test_task9.py
+CyberSOC follows the OpenEnv standard, fully decoupling the "Brain" (AI models) from the "Arena" (simulation environment). There are three major subsystems:
+
+**The Arena (FastAPI + WebSockets)** -- The game server maintains the network topology, active threats, business impact scores, a ThreatGraph knowledge graph, and a strict rule engine. It broadcasts state updates via WebSockets and supports multi-tenant sessions so multiple browser tabs can run independent episodes simultaneously.
+
+**The Dashboard (D3.js)** -- A real-time visualizer that connects over WebSocket and dynamically renders the Threat Graph, animating node compromises, isolations, alert queues, and forensic results as they happen.
+
+**The Fighters (Unsloth + vLLM)** -- The AI models run on a remote GPU. During training, both models share a single 24GB A10G GPU using 4-bit quantization. During inference, merged LoRA weights are served through vLLM for high-throughput token generation.
+
+```mermaid
+graph TB
+    subgraph Arena["Arena (FastAPI Server)"]
+        ENV["CyberSOCEnvironment<br/>500-node network simulation"]
+        TG["ThreatGraph<br/>Knowledge graph of entities"]
+        GR["10-Dim Grader<br/>Deterministic scoring"]
+        MW["ActionMiddleware<br/>Phase + graph validation"]
+        ENV --> TG
+        ENV --> GR
+        ENV --> MW
+    end
+
+    subgraph Brain["Brain (GPU)"]
+        BLUE["Blue Team: Qwen 7B<br/>Unsloth 4-bit LoRA<br/>(Learning Agent)"]
+        RED["Red Team: Qwen 3B<br/>4-bit Quantized<br/>(Static Adversary)"]
+    end
+
+    subgraph Dashboard["Dashboard (D3.js)"]
+        VIS["Real-time Threat Graph<br/>Node animations + alerts"]
+    end
+
+    BLUE -- "JSON actions via WebSocket" --> ENV
+    RED -- "JSON attacks via WebSocket" --> ENV
+    ENV -- "Observations + rewards" --> BLUE
+    ENV -- "Red observations" --> RED
+    ENV -- "State updates" --> VIS
 ```
 
 ---
 
-## 4. Backend (Server)
+## System Flow
 
-### 4.1 Core Environment — `play_environment.py`
-
-The heart of the project. `CyberSOCEnvironment` extends OpenEnv's `Environment` interface.
-
-**Key features:**
-- **`reset(task_id)`** — Builds the network, injects attack chains, initializes alert queue, seeds the ThreatGraph
-- **`step(action)`** — Processes one agent action, computes rewards, updates state, triggers adaptive adversary
-- **Concurrent sessions** — Each WebSocket connection gets its own environment instance
-- **ActionMiddleware** — Pre-flight validation (phase violations, graph-groundedness) before consuming a step
-
-**10 Agent Actions:**
-
-| # | Action | Purpose | Reward Range |
-|---|--------|---------|-------------|
-| 1 | `query_host` | Map architecture, get endpoint info | -0.05 to +0.05 |
-| 2 | `run_forensics` | Deep system artifact extraction | -0.02 to +0.10 |
-| 3 | `kill_process` | Terminate malicious execution | -0.08 to +0.25 |
-| 4 | `block_ioc` | Blacklist IOCs network-wide | -0.03 to +0.15 |
-| 5 | `isolate_segment` | Quarantine subnet or host | -0.10 to +0.15 |
-| 6 | `correlate_alerts` | Find shared entities across alerts | ±0.05 |
-| 7 | `enrich_ioc` | Threat-intel enrichment (actor, TTPs) | ±0.05 |
-| 8 | `scan_host_vulnerabilities` | Discover CVEs on a host | ±0.05 |
-| 9 | `trigger_playbook` | Execute SOAR automated response | ±0.10 |
-| 10 | `submit_containment_plan` | Final report — ends episode | 0.0 to 1.0 |
-
-### 4.2 Data Models — `models.py`
-
-All data flows through strict **Pydantic models** (429 lines):
-
-- **Enums**: `Severity`, `ThreatType` (13 types), `HostStatus`, `SubnetRole` (6 roles)
-- **Sub-models**: `Alert`, `HostInfo`, `NetworkTopology`, `ForensicsResult`, `TimelineEntry`
-- **`SOCObservation`** (extends OpenEnv `Observation`): 20+ fields including `alert_queue`, `network_topology`, `host_forensics`, `threat_graph_summary`, `reward_dimensions`, `available_playbooks`
-- **Actions**: Discriminated union of 10 action types via `SOCActionWrapper`
-- **`SOCState`** (internal): Tracks all episode state — killed processes, blocked IOCs, isolated subnets, etc.
-
-### 4.3 Task Definitions — `tasks.py`
-
-Three hand-crafted benchmark scenarios:
-
-| Task | Threats | Hosts | Max Steps | Description |
-|------|---------|-------|-----------|-------------|
-| **Easy** | 1 | 1 | 15 | Single ransomware on WS-042 |
-| **Medium** | 3 | 4 | 25 | Phishing → credential theft → lateral movement across 3 subnets |
-| **Hard** | 5 | 7 | 30 | Full APT: phishing → C2 → privesc → exfil → ransomware |
-
-**Network**: ~75 active hosts across 6 subnets (corporate, engineering, finance, DMZ, datacenter, executive) with realistic processes, ports, and criticality scores.
-
-### 4.4 Procedural Task Generator — `task_generator.py`
-
-Generates **1,000+ unique deterministic scenarios** from a seed:
-
-- `hash(task_id)` → deterministic `random.Random` seed → drives ALL choices
-- **Template pools**: 90+ malware process names, 40 C2 domains, 36 C2 IPs, 12 ransomware extensions, 12 data types
-- **3 difficulty tiers**: Easy (1 threat), Medium (2-3 threats, multi-stage chains), Hard (3-6 threats, APT campaigns)
-- **Alert generation**: Templated descriptions with randomized details (timestamps, file counts, data sizes)
-
-### 4.5 Grading System — `graders.py`
-
-**10-dimensional weighted grading:**
-
-| Dimension | Weight | What It Measures |
-|-----------|--------|-----------------|
-| `threat_containment` | 0.20 | Fraction of required process kills completed |
-| `ioc_blocking` | 0.12 | Fraction of known IOCs blocked (penalizes blind blocking) |
-| `forensic_investigation` | 0.10 | Compromised hosts examined |
-| `siem_correlation` | 0.08 | Whether alerts were correlated (bonus for early correlation) |
-| `threat_intel_usage` | 0.08 | IOCs enriched with threat intel |
-| `vuln_root_cause` | 0.08 | CVE root causes discovered (bonus if cited in plan) |
-| `business_impact` | 0.10 | Penalizes unnecessary isolation and over-isolation (>20% = -0.30) |
-| `step_efficiency` | 0.07 | Rewards SOAR playbook usage, penalizes step overrun |
-| `plan_coverage` | 0.10 | Threats addressed in final plan |
-| `plan_evidence_quality` | 0.07 | Evidence confidence from ThreatGraph |
-
-**Anti-gaming**: Per-occurrence penalty cap (±0.15), blind-blocking penalties, normalized evidence confidence.
-
-### 4.6 Threat Graph — `threat_graph.py`
-
-A **typed knowledge graph** tracking all SOC entities:
-
-- **5 Node Types**: `HostNode`, `ProcessNode`, `IOCNode`, `VulnerabilityNode`, `AlertNode`
-- **6 Edge Types**: `runs_on`, `involves`, `communicates_with`, `pivoted_from`, `part_of_chain`, `exploits`
-- **200-node cap** with LRU IOC pruning
-- **Version tracking** with changelog for delta queries
-- **Evidence confidence** computation for plan quality scoring
-- **Context summary** generation for LLM injection
-
-### 4.7 SOAR Playbooks — `soar_playbooks.py`
-
-5 automated response playbooks with prerequisite validation:
-
-| Playbook | Prerequisites | Sub-Actions |
-|----------|--------------|-------------|
-| `ransomware_containment` | Forensics run, process identified | kill_process, block_ioc |
-| `c2_disruption` | IOC enriched, C2 IP identified | block_ioc, isolate_segment |
-| `lateral_movement_lockdown` | Forensics run, lateral movement detected | kill_process, isolate_segment |
-| `phishing_response` | Phishing vector confirmed | enrich_ioc, block_ioc |
-| `data_exfil_stop` | Forensics run, exfil destination identified | block_ioc, kill_process |
-
-### 4.8 Action Validation — `action_validation.py`
-
-**3-gate middleware:**
-1. **Phase whitelist** — Actions restricted by phase (triage/investigation/remediation/report)
-2. **Schema validation** — Required arguments checked
-3. **Graph groundedness** — Actions must reference discovered entities (can't block an IOC you haven't seen)
-
-### 4.9 Tool Router — `tool_router.py`
-
-**Deterministic phase state machine:**
-- Phases: `triage` → `investigation` → `remediation` → `report` → `done`
-- Loop limits: max 4 investigation loops, 3 remediation loops
-- Supports **pushback** — agent can justify staying in a phase with graph references
-
-**Triage Solver**: Priority = `severity_weight × criticality_weight × (1 + blast_radius/10)`
-
-### 4.10 Episode Sandbox — `episode_sandbox.py`
-
-**Safety guardrails:**
-- **120-second wall-clock timeout** per episode
-- **20-step hard limit** per episode
-- **State integrity protection** — Protected fields (`_task_def`, `_live_requirements`, `_threat_graph`) are snapshot-hashed; mutations are detected and rolled back
-- **Hacking detection** — Reports any external state tampering
-
-### 4.11 Adaptive Red Team
-
-Two mechanisms in `play_environment.py`:
-
-1. **Reinfection** (`_maybe_reinfect`): 30% chance when killing a process if IOCs in the chain are unblocked → spawns `process_v2` variant + CRITICAL alert
-2. **Lateral Pivot** (`_execute_lateral_pivot`): Triggered by isolate/kill actions on hard tasks → copies malware to adjacent healthy host, adds `pivoted_from` edge, emits PIVOT alert, updates live requirements
-
-**Escalation**: Probability increases when agent is slow (step > 10 with 0 containments).
-
-### 4.12 Server Application — `app.py`
-
-FastAPI app created via OpenEnv's `create_app()`:
-- **POST /reset** — Reset environment with task_id
-- **POST /step** — Execute an action
-- **GET /state** — Get current state
-- **WS /ws** — WebSocket for persistent sessions
-- CORS enabled for dashboard communication
-- Supports 4 concurrent environment instances
-
----
-
-## 5. Frontend (Dashboard)
-
-### 5.1 Overview
-
-A real-time **"CyberSOC Command Center"** web dashboard with 6 panels, built with vanilla HTML/CSS/JS + D3.js + Chart.js.
-
-### 5.2 Six Dashboard Panels
-
-1. **Alert Queue** — Live SIEM/EDR alerts with severity badges and IOC indicators
-2. **Live Threat Graph** — D3.js force-directed graph with 5 node types, drag/zoom, glow effects, pivot animation
-3. **Agent Actions** — Chronological action log with reward tracking
-4. **Network Topology** — Visual subnet map with compromised/isolated counts
-5. **Performance Metrics** — Chart.js radar chart (10 dimensions) + cumulative reward timeline
-6. **Mission Status** — Containment progress bars, business impact gauge, active threat list, episode controls, **🔴 Red Team Toolkit** (hotseat multiplayer)
-
-### 5.3 Visual Design
-
-- **Dark theme** with glassmorphism panels
-- **Typography**: Inter (UI) + JetBrains Mono (data)
-- **Color system**: Accent colors for cyan, green, amber, red, purple
-- **Animations**: Count-up numbers, scale bounces, pulse glows, screen flashes
-- **Red Team pivot**: Screen border flash, toast notification, traveling dot animation on pivot edges
-
-### 5.4 Key Frontend Components
-
-**`graphs.js` (881 lines)**:
-- `ClientThreatGraph` — Client-side graph state manager synced from observations
-- `ThreatGraphViz` — D3.js v7 force simulation with SVG glow filters, curved edges, node symbols (circle/diamond/triangle/square/wye), click-to-highlight, drag behavior
-- `RadarChart` — Chart.js 10-axis radar for live grading dimensions
-- `RewardTimeline` — Gradient-filled cumulative reward line chart
-
-**`app.js` (45KB)** — Main orchestrator handling episode lifecycle, API calls, UI updates, phase indicator tracking
-
-**`api.js`** — REST client with auto-detection of server origin, session management, response parsing
-
-**`animations.js`** — Utility library for count-up, screen flash, toast notifications, scale bounce, pulse glow, dramatic final score reveal
-
-### 5.5 Dashboard Server — `dashboard_server.py`
-
-Wraps the FastAPI app to also serve the dashboard as static files at `/dashboard/`. Prints a styled ASCII banner on startup.
-
----
-
-## 6. Inference & Training
-
-### 6.1 Inference Script — `inference.py`
-
-LLM baseline agent using **OpenAI-compatible API**:
-- System prompt defines SOC analyst role with all 6 core actions
-- Formats observations into structured text for the LLM
-- Parses JSON actions from LLM responses (with fallback extraction)
-- Runs episodes across easy/medium/hard tasks
-- Emits structured stdout logs: `[START]`, `[STEP]`, `[END]` (hackathon requirement)
-- Default model: `Qwen/Qwen2.5-72B-Instruct` via HuggingFace Router
-
-### 6.2 GRPO Reward Functions — `training/reward_funcs.py`
-
-10 TRL-compatible reward functions for **Group Relative Policy Optimization**:
-
-```python
-from training.reward_funcs import make_soc_reward_funcs
-reward_fns = make_soc_reward_funcs("http://localhost:8000")
-trainer = GRPOTrainer(model=model, reward_funcs=reward_fns, args=GRPOConfig(...))
-```
-
-Each function:
-1. Parses completion as JSON action list
-2. Replays actions against live environment server
-3. Returns the specific dimension's score from `grade_breakdown`
-4. Non-parseable completions return 0.0
-
-### 6.3 Per-Step Reward Dimensions
-
-The environment computes **live partial scores** every step (`_compute_reward_dimensions`) for GRPO credit assignment without waiting for the terminal grade. These are exposed in `SOCObservation.reward_dimensions`.
-
----
-
-## 7. Testing
-
-**11 test files** covering all major components:
-
-| File | Focus |
-|------|-------|
-| `test_integration.py` | Full episode flows, phase violations, adaptive pivots, 10-dim grading, sandbox limits |
-| `test_task1.py` - `test_task9.py` | Individual task-specific validations |
-
-Key integration tests:
-- Easy/medium episodes complete without crashes
-- All 10 action types can be exercised in a single episode
-- Phase violations return negative reward (not crash)
-- Adaptive pivot fires on hard tasks
-- Step rewards accumulate correctly and are idempotent
-- Grader returns exactly 10 dimensions
-- Sandbox step limit raises `EpisodeTimeout`
-
----
-
-## 8. Deployment & DevOps
-
-### Docker
-- **Root Dockerfile** — Slim Python 3.10, serves on port 7860 (HuggingFace Spaces)
-- **Server Dockerfile** — Multi-stage build from `ghcr.io/meta-pytorch/openenv-base`, uses `uv` for dependency management, health check on `/health`
-
-### Validation
-`validate_submission.sh` — 3-step validator:
-1. Ping HF Space `/reset` endpoint
-2. Docker build succeeds
-3. `openenv validate` passes
-
-### OpenEnv Manifest
-`openenv.yaml` — 1,003 task definitions with descriptions, max steps, and difficulty tags. Used by the OpenEnv framework for task discovery and benchmarking.
-
----
-
-## 9. Environment Variables
-
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `API_BASE_URL` | LLM API endpoint | `https://router.huggingface.co/v1` |
-| `MODEL_NAME` | Model identifier | `Qwen/Qwen2.5-72B-Instruct` |
-| `HF_TOKEN` | HuggingFace API key | — |
-
----
-
-## 10. Data Flow
+The following sequence diagram shows a single round of Fictitious Self-Play (FSP), where Blue and Red alternate turns within one shared episode:
 
 ```mermaid
 sequenceDiagram
-    participant Agent as LLM Agent
-    participant Inf as inference.py
-    participant Env as CyberSOCEnvironment
-    participant TG as ThreatGraph
-    participant Gr as Grader
+    participant B as Blue Team (7B)
+    participant S as Server (Arena)
+    participant R as Red Team (3B)
+    participant G as Grader
 
-    Inf->>Env: reset(task_id="hard")
-    Env->>TG: populate from task_def
-    Env-->>Inf: SOCObservation (alerts, topology)
-    
-    loop Each Step
-        Inf->>Agent: format_observation → LLM prompt
-        Agent-->>Inf: JSON action
-        Inf->>Env: step(SOCActionWrapper)
-        Env->>Env: ActionMiddleware.validate()
-        Env->>Env: Handle action (query/forensics/kill/etc)
-        Env->>TG: Update graph nodes/edges
-        Env->>Env: _adversary_react() (adaptive pivot)
-        Env->>Env: _compute_reward_dimensions()
-        Env-->>Inf: SOCObservation (updated state)
+    Note over S: reset(task_id, fsp_mode=True)
+    S->>B: Initial observation (alerts, topology)
+
+    loop Each Round (up to 30)
+        B->>S: Blue action (e.g. run_forensics)
+        S->>S: Validate via ActionMiddleware
+        S->>S: Execute action, update ThreatGraph
+        S->>S: Compute step reward
+        S->>R: Red observation (compromised hosts, Blue activity)
+
+        R->>S: Red action (e.g. lateral_pivot)
+        S->>S: Execute Red action
+        S->>S: Increment step_count
+        S->>B: Updated observation
     end
-    
-    Inf->>Env: step(submit_containment_plan)
-    Env->>Gr: grade_episode(actions, plan, graph, task_def, state)
-    Gr-->>Env: {final_score, breakdown[10], penalties, bonuses}
-    Env-->>Inf: SOCObservation (done=true, final_score)
+
+    B->>S: submit_containment_plan
+    S->>G: Grade episode (10 dimensions)
+    G->>S: final_score + breakdown + penalties
+    S->>B: Terminal observation (done=True, score)
 ```
 
 ---
 
-## 11. Red Team Design Philosophy
+## Models and AI Techniques
 
-The Red Team is NOT a separate LLM agent. It is a **deterministic adversarial dynamics engine** that defines the environment's state transition function.
+### Blue Team (Defender) -- The Learning Agent
 
-### 7 Behavioral Mechanisms
-1. **Reactive Pivoting**: Triggers on `isolate_segment` and `kill_process` (copy-not-move spread)
-2. **Persistence**: Reinfection triggers when a process is killed but its root IOC remains unblocked (teaches causal reasoning)
-3. **Time Pressure**: Pivot probability escalates +0.2 after step 10 if zero containments are achieved
-4. **Controlled Randomness**: Uses an episode-scoped `self._rng` (seeded by `task_id`) to ensure deterministic rollouts
-5. **Noisy Observations**: Benign processes mixed in host data
-6. **Escalation**: Pivot probabilities scale with difficulty (`Easy: 0.0`, `Medium: 0.3`, `Hard: 0.8`)
-7. **Stall Punishment** *(new)*: If Blue makes 3+ consecutive passive actions (`query_host` / `pass_turn`) without containment, Red immediately deploys ransomware; plus a 15 % chance to spread laterally even on passive Blue turns
+| Property | Value |
+|----------|-------|
+| Base Model | **Qwen/Qwen2.5-7B-Instruct** |
+| Quantization | 4-bit QLoRA via Unsloth |
+| LoRA Rank | 16 (alpha=16) |
+| Target Modules | q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj |
+| Trainable Params | 40,370,176 of 4.93B total (0.82%) |
+| Training Method | SFT warm-start then custom GRPO |
+| Role | Primary learning agent that improves through RL |
 
-### Attack Lifecycle Model (MITRE-aligned)
-`Phase 1: Compromise` → `Phase 2: Lateral Movement` → `Phase 3: Persistence` → `Phase 4: Escalation` → `Phase 5: Impact`
+### Red Team (Attacker) -- The Static Adversary
 
----
+| Property | Value |
+|----------|-------|
+| Base Model | **Qwen/Qwen2.5-3B-Instruct** |
+| Quantization | 4-bit via Unsloth |
+| Training | None (frozen, inference-only) |
+| Role | Provides a consistent adversarial benchmark |
+| Actions | lateral_pivot, deploy_payload, evade_detection, pass_turn |
 
-## 12. Reward-Hacking Defense Map
+### Production Inference
 
-Per guide §8, we implemented specific defenses against the known RL exploit vectors:
-
-| Guide Attack Vector | Our Defense |
-|---|---|
-| Editing timers | `EpisodeSandbox` wall-clock enforcement |
-| Caching results | Idempotent step rewards via `_fired_step_rewards` |
-| Abusing globals | Instance-scoped RNG + episode-scoped `self._rng` |
-| Mutating protected state | Sandbox hash-snapshot + rollback |
-| Exploiting env bugs | 3-gate validation middleware |
-| Reward-function gaming | Evidence confidence normalization |
-| Cheating via blind remediation | Graph-groundedness gate |
-| Blind IOC blocking | Enrichment-before-block penalty |
-
----
-
-## 13. Curriculum Learning Strategy
-
-The 1000+ deterministic scenarios generated by `task_generator.py` are explicitly divided into three difficulty tiers to support Curriculum Learning (Guide §6).
-
-This exists precisely to satisfy **Daniel's Law of RL**: *The base model must get non-zero reward on Easy before it can meaningfully learn Hard.*
-
-- **Phase 1 (Warm-Start)**: `gen_0001`–`gen_0333` (Easy). Single threat, 15 max steps, 0.0 pivot probability.
-- **Phase 2 (Scaling)**: `gen_0334`–`gen_0666` (Medium). Multi-stage, 25 max steps, 0.3 pivot probability.
-- **Phase 3 (Stress-Test)**: `gen_0667`–`gen_1000` (Hard). APT, 30 max steps, 0.8 pivot probability.
-
-The adaptive pivot probability is itself a curriculum signal; the environment gets harder as the agent gets better.
+| Property | Value |
+|----------|-------|
+| Engine | vLLM |
+| Format | Merged 16-bit LoRA weights |
+| Throughput | Over 150 tokens/sec (up from ~40 with vanilla HF) |
 
 ---
 
-## 14. Intended Training Stack
+## Training Pipeline
 
-CyberSOCEnv is designed for the canonical stack specified in Guide §10:
+Training follows a two-phase approach designed to bootstrap a model that cannot initially produce valid JSON into a capable SOC analyst:
 
-1. **Unsloth**: 4-bit QLoRA loading and efficient inference
-2. **TRL**: `GRPOTrainer` consuming our 10 independent callable functions via `reward_funcs=[...]`
-3. **OpenEnv**: WebSocket transport and session isolation
-4. **vLLM**: Serving the rollout workers for maximum throughput
+```mermaid
+graph LR
+    A["Phase 1: SFT Warm-Start"] --> B["Phase 2: GRPO Reinforcement Learning"]
+    B --> C["Phase 3: LoRA Merge + vLLM Deploy"]
 
-A reference adapter module exists at `training/reward_funcs.py` that mirrors the Unsloth 2048 notebook structure 1:1, allowing plug-and-play GRPO training.
+    subgraph Phase1["SFT (Supervised Fine-Tuning)"]
+        A1["Run 50 scripted 'perfect' games"] --> A2["Filter traces with score > 0.3"]
+        A2 --> A3["Format as Qwen chat templates"]
+        A3 --> A4["Train 1 epoch with UnslothSFTTrainer"]
+    end
 
----
+    subgraph Phase2["GRPO (Group Relative Policy Optimization)"]
+        B1["Run N episodes with Blue + Red"] --> B2["Collect transitions with rewards"]
+        B2 --> B3["Compute discounted returns (gamma=0.99)"]
+        B3 --> B4["Normalize advantages across group"]
+        B4 --> B5["PPO-clipped gradient update (eps=0.2)"]
+        B5 --> B1
+    end
+```
 
-## 15. Anti-Patterns Avoided
+### Phase 1: SFT Warm-Start
 
-How we avoided the 7 common mistakes listed in Guide §21:
+The SFT phase solves what we call "Daniel's Law of RL" -- the base model must be able to emit syntactically valid JSON actions before GRPO can meaningfully optimize behavior. Without this, the model spends its entire reward budget learning formatting instead of strategy.
 
-1. **Building before designing env**: Env, types, and sandbox were built and tested completely offline before any trainer was attached.
-2. **LLM-as-a-judge**: CyberSOCEnv uses zero LLM-as-judge signals. Everything is deterministic code against the ThreatGraph.
-3. **Single monolithic reward**: We use a 10-dimensional verifiable rubric, fed independently into TRL.
-4. **Ignoring inference latency**: We implemented Graph Delta Injection (~10x fewer tokens) and a sparse-node generation strategy (~75 active nodes) specifically to optimize GRPO rollout latency.
-5. **No abuse prevention**: 3-gate middleware + EpisodeSandbox explicitly prevent out-of-band cheating.
-6. **Delayed deployment**: Environment was packaged with Docker and deployed to HF Spaces early.
-7. **Scaling prematurely**: All 9 components passed integration testing (`test_integration.py` through `test_task9.py`) before scaling to 1000 tasks.
+The `collect_sft_data.py` script runs a scripted "perfect agent" through 50 procedurally generated tasks:
+1. Run forensics on all compromised hosts
+2. Kill all malicious processes identified
+3. Block all IOCs found in the attack chain
+4. Submit a containment plan with full evidence
 
----
+Traces scoring below 0.3 are discarded. The remaining high-quality traces (typically 40 out of 50) are formatted as Qwen chat-template conversations and used for a single epoch of SFT with Unsloth's optimized trainer.
 
-## 16. Known Deviations & Alignment Items
+**SFT Training Configuration:**
+- Batch size: 2 per device, gradient accumulation: 4 (effective batch: 8)
+- Learning rate: 2e-4 with linear scheduler
+- Optimizer: AdamW 8-bit
+- Precision: bfloat16 on Ampere GPUs
+- Weight decay: 0.01
 
-While we strive to match the OpenEnv canonical scaffolding (Guide §5), there are a few intentional architectural differences:
+### Phase 2: Custom GRPO Loop
 
-1. **Action Dispatch**: We use a discriminated union wrapper (`SOCActionWrapper` with a `type` field) rather than a single flat action class. This matches the MCP ToolCall pattern and real SOC work better than a flat action space.
-2. **Decoupled Engine**: The core logic lives in `server/play_environment.py`, completely separate from the FastAPI transport layer in `server/app.py`. This ensures we can run headless parallel environments during GRPO without HTTP overhead if needed.
+Standard `trl.GRPOTrainer` causes OOM errors when two models share a 24GB GPU. We wrote a custom micro-batch PPO/GRPO loop in raw PyTorch that:
 
----
-
-## 17. Team Structure & Role Split
-
-Per guide §17, responsibilities are split across three functional roles to execute the RL pipeline effectively.
-
-### Role 1: Environment Engineer
-**Mission**: Build a deterministic, unhackable, fast environment.
-**Owns**: `play_environment.py`, `tasks.py`, `threat_graph.py`, `episode_sandbox.py`, `action_validation.py`, `tests/`
-- **Scope**: Implements the state machine, Red Team behavior, and validates actions. Owns the core `step()` and `reset()` loops. Ensures the environment parses valid inputs and securely handles invalid ones.
-- **Hackathon Focus**: Bug fixes, latency optimization (graph deltas), sandbox integrity, and procedural scenario generation.
-
-### Role 2: Reward Engineer
-**Mission**: Design the mathematical signals that shape model behavior.
-**Owns**: `graders.py`, `training/reward_funcs.py`, `models.py`
-- **Scope**: Creates the 10-dimensional verifiable grading logic. Plumbs the environment outputs into TRL-compatible `reward_funcs`. Tunes the penalties to prevent reward hacking (e.g., punishing blind IOC blocking).
-- **Hackathon Focus**: Ensuring the model gets positive step-rewards early on to prevent it from collapsing, while preventing it from finding "lazy" exploits.
-
-### Role 3: Training Engineer
-**Mission**: Execute the GRPO curriculum and produce the final model.
-**Owns**: `training/` directory, Colab notebooks, `inference.py`
-- **Scope**: Sets up the actual training loops using Unsloth and TRL. Manages the hyperparameter tuning, LoRA checkpointing, and vLLM inference configuration. Runs the curriculum from Easy to Hard.
-- **Hackathon Focus**: Capturing the before/after learning curves on held-out tasks to prove to the judges that the environment actually works to train a model.
+1. Runs N episodes (20 per epoch) with Blue generating actions and Red providing opposition
+2. Collects transitions containing output token IDs, input lengths, and per-step rewards
+3. Computes discounted returns with gamma=0.99
+4. Normalizes returns across the full batch (Group Relative advantage)
+5. Processes gradients one transition at a time to fit in VRAM
+6. Applies PPO clipping (epsilon=0.2) and gradient clipping (max norm=1.0)
+7. Updates every epoch with AdamW (lr=2e-5) and linear warmup scheduler
 
 ---
 
-## 18. Key Innovations Summary
+## Unsloth and Optimization
 
-| Innovation | Description |
-|-----------|-------------|
-| **Procedural Generation** | SHA-256 seeded RNG generates 1000+ unique deterministic scenarios |
-| **ThreatGraph** | Typed knowledge graph with version tracking, evidence confidence, and LRU pruning |
-| **10-Dim Grading** | Weighted multi-dimensional scoring replacing binary pass/fail |
-| **Adaptive Red Team** | Attacker reacts to defender actions — lateral pivots and reinfection |
-| **SOAR Playbooks** | Prerequisite-gated automated response workflows |
-| **3-Gate Validation** | Phase whitelist + schema + graph-groundedness prevents invalid actions |
-| **Live GRPO Signals** | Per-step reward dimensions for RL credit assignment |
-| **Anti-Gaming** | Blind-blocking penalties, over-isolation cap, idempotent step rewards (0.40 cap) |
-| **Real-time Dashboard** | D3.js threat graph with pivot animations and 10-dim radar chart |
-| **Stall Punishment** | 3 consecutive passive Blue actions triggers ransomware deploy + 15 % autonomous pivot |
-| **Emergency Gate** | `isolate_segment` in triage requires a critical alert; `UNJUSTIFIED_EMERGENCY` → -0.15 penalty |
-| **External Intel Feed** | `task_def.external_intel_feed` IOCs injected at reset — immediately blockable/enrichable |
-| **Doomsday Clock** | `state.business_impact × 0.30` applied as a direct score modifier; 90 % negligence crush when no threats contained |
+Fitting two LLMs on a single 24GB NVIDIA A10G for reinforcement learning required aggressive optimization. Unsloth was central to making this feasible.
+
+### What Unsloth Provides
+
+- **2x faster fine-tuning** through fused CUDA kernels that patch attention, MLP, and layer norm operations
+- **~60% less VRAM** compared to vanilla Hugging Face PEFT by combining quantization, kernel fusion, and gradient checkpointing into a single pipeline
+- **FastLanguageModel API** that replaces the manual pipeline of AutoModelForCausalLM + BitsAndBytesConfig + get_peft_model into a single call
+- **Fused gradient checkpointing** (`use_gradient_checkpointing="unsloth"`) that recomputes activations more efficiently than PyTorch's default
+- **Fast weight downloading** and optimized tokenizer patching for Qwen architecture
+
+### Optimization Stack Summary
+
+| Technique | Purpose | Memory Savings |
+|-----------|---------|---------------|
+| 4-bit NF4 Quantization (BitsAndBytes) | Compress model weights from 16-bit to 4-bit | ~75% weight memory |
+| QLoRA Adapters (rank=16) | Train only 0.82% of parameters | ~98% gradient memory |
+| Unsloth Kernel Fusion | Fuse attention + MLP operations | ~30% compute overhead |
+| Unsloth Gradient Checkpointing | Trade compute for memory during backprop | ~40% activation memory |
+| Micro-batch gradient accumulation | Process one transition at a time | Fits in 24GB with two models |
+| Red model frozen (eval mode) | No gradients stored for adversary | ~50% of second model memory |
+| AdamW 8-bit optimizer | Compress optimizer states | ~50% optimizer memory |
+
+### Hardware Configuration (from training logs)
+
+```
+GPU: NVIDIA A10G (22.3 GB)
+CUDA: 8.6, Toolkit: 12.1
+Torch: 2.5.1+cu121
+Precision: bfloat16
+Unsloth Version: 2026.4.8
+Platform: Linux (HuggingFace Spaces)
+```
 
 ---
 
-## 19. Technology Stack
+## 10-Dimensional Reward System
 
-| Layer | Technologies |
-|-------|-------------|
-| **Backend** | Python 3.10+, FastAPI, Uvicorn, Pydantic v2, OpenEnv Core |
-| **Frontend** | Vanilla HTML/CSS/JS, D3.js v7, Chart.js v4, Inter/JetBrains Mono fonts |
-| **Inference** | OpenAI Python SDK, asyncio |
-| **Training** | TRL (Hugging Face), GRPO |
-| **DevOps** | Docker (multi-stage), uv package manager, pytest |
-| **Deployment** | HuggingFace Spaces (Docker SDK) |
-| **Visualization** | NetworkX + Matplotlib (server-side PNG), D3.js (client-side interactive) |
+Instead of a single scalar reward, CyberSOC grades each episode across 10 orthogonal dimensions. This prevents the model from optimizing a single shortcut and forces well-rounded SOC behavior.
+
+| Dimension | Weight | What It Measures |
+|-----------|--------|-----------------|
+| threat_containment | 0.20 | Were all required malicious processes killed? |
+| ioc_blocking | 0.12 | Were all required IOCs blocked at the perimeter? |
+| forensic_investigation | 0.10 | Were compromised hosts examined via forensics? |
+| siem_correlation | 0.08 | Were related alerts correctly correlated? |
+| threat_intel_usage | 0.08 | Were IOCs enriched with threat intelligence? |
+| vuln_root_cause | 0.08 | Was the root-cause vulnerability identified? |
+| business_impact | 0.10 | Was business disruption minimized? |
+| step_efficiency | 0.07 | Was the investigation completed without wasting steps? |
+| plan_coverage | 0.10 | Does the containment plan address all known threats? |
+| plan_evidence_quality | 0.07 | Is the plan backed by graph-linked evidence? |
+
+The `business_impact` dimension acts as a "doomsday clock" -- it is excluded from the weighted sum and applied as a direct negative modifier, ensuring that catastrophic business disruption is always penalized regardless of other scores.
+
+---
+
+## Anti-Cheating, Anti-Corruption, Anti-Reward-Hacking
+
+This is one of the most hardened aspects of the project. Every reward pathway has been designed to resist exploitation by the learning agent.
+
+### 1. Blind Blocking Prevention
+
+The agent cannot earn reward for blocking an IOC unless it was first discovered through `run_forensics` or `enrich_ioc`. Blind blocks are recorded but yield zero reward. The grader additionally penalizes blocked IOCs that were never enriched (`blind_blocking` penalty: -0.05 per occurrence).
+
+**Why this matters:** Without this gate, an RL agent learns to spam `block_ioc` with hallucinated values, inflating its blocking score without doing real investigation.
+
+### 2. Investigation-Before-Action Middleware
+
+The `ActionMiddleware` validates every action before execution:
+- **Phase violation:** Submitting a containment plan during the triage phase (before any investigation) is rejected with a -0.10 penalty
+- **Graph-groundedness:** Enriching an IOC not present in the ThreatGraph is rejected (-0.05)
+- **Unjustified emergency:** Isolating a segment during triage without a critical-severity alert on that subnet is rejected (-0.15)
+
+### 3. Over-Isolation Penalties
+
+Isolating network segments is a blunt instrument that causes business downtime. The system penalizes this aggressively:
+- Each clean (non-compromised) host isolated: -0.25 reward and +0.05 business impact
+- Single clean host isolation: -0.35 reward and +0.10 business impact
+- Isolating a subnet on the prohibited list (`must_not_isolate`): additional -0.10
+- Over-isolation in grading: up to -0.80 penalty if hosts are isolated without attack-chain justification
+
+**Why this matters:** Without these penalties, the agent learns to "nuke everything" -- isolating the entire network is a trivially easy way to stop all threats, but it causes total business outage.
+
+### 4. Stall Detection
+
+If the agent repeats the same action three times consecutively (same action type and target), it receives a -0.05 penalty per occurrence. This prevents the agent from getting stuck in loops.
+
+### 5. Evidence Confidence Normalization
+
+The ThreatGraph's `compute_evidence_confidence()` normalizes against the rubric item count rather than the raw number of graph nodes. A spammer who generates 10 graph nodes via forensics spam only scores against the rubric-sized baseline (typically 3-5 items), not against 10.
+
+### 6. Plan Padding Detection
+
+The grader detects and penalizes hollow containment plan entries -- those with confidence below 0.2 or empty root causes. Each padded entry incurs a -0.10 penalty on plan_coverage.
+
+### 7. Negligence Penalty
+
+If the agent submits a plan without containing any threats (threat_containment = 0.0), the entire final score is multiplied by 0.1, and both business_impact and step_efficiency dimensions are also crushed to 10% of their values.
+
+### 8. Disruption Cost Accumulation
+
+Business disruption is tracked cumulatively across the episode, not just per-action. This prevents the agent from spreading isolation actions across many steps to dilute individual penalties.
+
+### 9. Idempotent Step Rewards
+
+Each unique (action_type, target) pair can only earn its discovery reward once. Re-running forensics on the same host or re-querying it yields negative reward, preventing farming.
+
+### 10. Red Team as Corruption Pressure
+
+The static Red Team actively works against the Blue agent by pivoting to new hosts, deploying payloads, and evading detection. This ensures the Blue agent cannot achieve high scores through passive strategies.
+
+---
+
+## The RL Journey: From Panic to Precision
+
+The training logs tell a compelling story of artificial adaptation across epochs:
+
+### Epoch 1: The "Panic" Phase
+
+In the first 50 episodes, the Blue Team behaved like a terrified junior analyst. When the Red Team triggered an alert, the Blue agent would enter a state of panic -- chaining together up to 28 sequential actions of arbitrary `isolate_segment` and `create_firewall_rule` commands.
+
+**Result:** Massive business downtime, exhausted turn limits, and heavy negative rewards (-5.60, -9.20). The Red Team easily slipped through the cracks while the Blue agent was busy locking down clean hosts.
+
+### Epoch 3: The "Aha!" Moment
+
+As gradients flowed through the micro-batch optimizer, the model began to understand the penalty structure. It discovered the Instant Win Condition: opening with `run_forensics` on the alerted host, then surgically killing the malicious process.
+
+**Result:** The Blue Team accurately pinpointed malware on Step 0, neutralizing the Red Team before it could pivot, scoring consistent +0.120 rewards.
+
+### Epoch 6: The Veteran Analyst
+
+By the final epochs, the RL policy converged. The chaotic 28-step lockdowns disappeared entirely. The Blue Team executed a precise `run_forensics` -> `kill_process` -> `block_ioc` -> `submit_containment_plan` loop, surgically removing each threat without impacting the wider business network.
+
+---
+
+## Innovations
+
+1. **Asymmetric Dual-Model RL on a Single GPU** -- Running a 7B learner and a 3B adversary simultaneously on a 24GB GPU for reinforcement learning, made possible by Unsloth's memory optimizations and a custom micro-batch gradient loop.
+
+2. **Custom Micro-Batch GRPO** -- Bypassing Hugging Face's `trl.GRPOTrainer` (which OOMs in dual-model setups) with a hand-written PyTorch loop that accumulates gradients one transition at a time.
+
+3. **10-Dimensional Reward Decomposition** -- Instead of a single scalar reward, the grader provides 10 orthogonal scores that can each serve as independent GRPO reward functions, enabling fine-grained credit assignment.
+
+4. **ThreatGraph Knowledge Graph** -- A typed, versioned knowledge graph (hosts, processes, IOCs, vulnerabilities, alerts, edges) that grows during the episode and serves as the ground truth for action validation and evidence scoring.
+
+5. **ActionMiddleware Validation Layer** -- Pre-flight action validation that prevents phase violations, graph-ungrounded actions, and unjustified emergency responses before they reach the environment.
+
+6. **SFT Warm-Start with Quality Filtering** -- Using a scripted perfect agent to generate SFT training data, then filtering by score threshold (0.3) to ensure only high-quality demonstrations bootstrap the policy.
+
+7. **Fictitious Self-Play (FSP) Turn System** -- Strict alternating Blue/Red turns where step_count only increments after both agents have acted, with backward-compatible non-FSP mode for testing.
+
+8. **Anti-Reward-Hacking Hardening** -- Nine distinct mechanisms (blind blocking prevention, investigation gates, over-isolation penalties, stall detection, evidence normalization, plan padding detection, negligence penalty, cumulative disruption tracking, idempotent rewards) that close off shortcut strategies.
+
+9. **Multi-Tenant WebSocket Architecture** -- Each browser tab gets its own isolated CyberSOCEnvironment instance via session-keyed WebSockets, eliminating state leakage between concurrent users.
+
+10. **Procedural Task Generation** -- Tasks are generated deterministically from a seed, providing infinite scenario variety for training while remaining reproducible for evaluation.
+
+---
+
+## Agent Roles and Real-World Inspirations
+
+Each AI agent in CyberSOC maps to a real-world cybersecurity role:
+
+### Blue Team Agent -- The SOC Analyst
+
+**Real-world role:** A Tier 2/3 Security Operations Center analyst who triages alerts, investigates incidents, and coordinates containment.
+
+**Inspiration:** Real SOC analysts at organizations like CrowdStrike, Mandiant, and corporate security teams who must make rapid decisions under pressure -- balancing thorough investigation against time-critical containment, all while minimizing business disruption.
+
+**What the agent learns:**
+- Prioritize investigation (forensics) before remediation (isolation)
+- Use surgical responses (kill_process, block_ioc) over blunt instruments (isolate_segment)
+- Gather evidence before making claims in the containment plan
+- Balance speed against thoroughness
+
+### Red Team Agent -- The APT Actor
+
+**Real-world role:** An Advanced Persistent Threat operator who has gained initial access and is expanding their foothold.
+
+**Inspiration:** Nation-state threat actors and red team operators who use lateral movement, payload deployment, and evasion techniques. The Red agent's action space (lateral_pivot, deploy_payload, evade_detection, pass_turn) mirrors the MITRE ATT&CK framework's post-exploitation tactics.
+
+**Why it is static:** The Red agent is frozen during training to provide a consistent adversarial baseline. This mirrors how real red team exercises use a fixed playbook to evaluate blue team improvements.
+
+### The Environment -- The Enterprise Network
+
+**Real-world analog:** A 500-node corporate network with segmented subnets (corporate, engineering, finance, DMZ, datacenter, executive), each with different business criticality scores.
+
+**Inspiration:** Real enterprise environments where incident responders must consider that isolating the finance subnet during quarter-end close would be catastrophic, even if it contains a threat.
+
+---
+
+## Real-World Positives
+
+**For Security Operations:**
+- Demonstrates that LLMs can learn effective incident response strategies through reinforcement learning, potentially augmenting human SOC analysts
+- The 10-dimensional grading system could serve as a standardized evaluation framework for SOC analyst training programs
+- The investigation-before-action paradigm mirrors best practices taught in SANS and GIAC certifications
+
+**For AI Safety:**
+- The anti-reward-hacking mechanisms provide a template for hardening RL environments in safety-critical domains
+- The business impact "doomsday clock" shows how to encode real-world constraints (collateral damage) into reward functions
+- Demonstrates that RL agents can learn nuanced policies (surgical response vs. blunt lockdown) when the reward signal properly encodes trade-offs
+
+**For Resource-Constrained ML:**
+- Proves that meaningful RL training with dual LLMs is possible on a single consumer-grade GPU
+- The Unsloth + QLoRA + micro-batch approach is reproducible by researchers without access to multi-GPU clusters
+- The SFT warm-start pattern is broadly applicable to any domain where the base model cannot initially produce valid structured output
+
+**For Cybersecurity Training:**
+- The simulation environment could be used for training human analysts in a safe, repeatable setting
+- The procedural task generator creates unlimited scenario variety without manual scenario authoring
+- The grading rubric provides objective, reproducible evaluation of incident response quality
+
+---
+
+## Training Phase Positives
+
+The training notebook (`CyberSOC_Standard_Final.ipynb`) demonstrates several engineering best practices:
+
+1. **Unsloth FastLanguageModel Integration** -- Single API call replaces the manual AutoModelForCausalLM + BitsAndBytesConfig + get_peft_model pipeline, reducing boilerplate and potential for misconfiguration.
+
+2. **Separate Model Loading Strategy** -- Blue (7B, training mode) and Red (3B, frozen inference mode) are loaded independently with Unsloth, ensuring Red's weights never accumulate gradients.
+
+3. **Quality-Filtered SFT Data** -- Only traces scoring above 0.3 (40 out of 50 typically) are used for SFT, preventing the model from learning from poor demonstrations.
+
+4. **Structured Chat Template Formatting** -- SFT data is formatted using Qwen's native chat template (`get_chat_template(tokenizer, chat_template="qwen-2.5")`), ensuring the fine-tuned model produces output in the expected conversational format.
+
+5. **8-bit AdamW Optimizer** -- Reduces optimizer state memory by ~50% compared to full-precision Adam, critical when two models share GPU memory.
+
+6. **Gradient Accumulation (steps=4-8)** -- Achieves effective batch sizes of 8-16 while only materializing one micro-batch at a time, staying within VRAM limits.
+
+7. **Linear Learning Rate Schedule** -- Prevents catastrophic forgetting during SFT by warming up then linearly decaying the learning rate.
+
+8. **Random Exploration Fallback** -- During GRPO, if the model generates unparseable JSON, the system falls back to a random valid action instead of a static default, maintaining exploration diversity.
+
+9. **WandB Integration** -- Training metrics (loss, mean_reward, learning_rate) are logged to Weights & Biases for real-time monitoring of training dynamics.
+
+10. **Discounted Return Computation** -- Returns are computed with gamma=0.99 and group-normalized across the full batch, implementing the "group relative" aspect of GRPO that compares each trajectory against its peers.
+
+---
+
+## Project Structure
+
+```
+MetaRound2/
+|-- inference.py              # Hackathon-compliant inference script (Blue + Red FSP)
+|-- models.py                 # Pydantic data models (Observation, Actions, State)
+|-- dashboard_server.py       # Multi-tenant WebSocket server + static file serving
+|-- client.py                 # Python client for programmatic interaction
+|-- server/
+|   |-- app.py                # FastAPI application factory (OpenEnv create_app)
+|   |-- play_environment.py   # Core environment: 500-node network, FSP turns, rewards
+|   |-- graders.py            # 10-dimensional deterministic episode grading
+|   |-- threat_graph.py       # Typed knowledge graph (hosts, IOCs, vulns, alerts)
+|   |-- tasks.py              # Task definitions (easy, medium, hard)
+|   |-- task_generator.py     # Procedural task generation from seeds
+|   |-- action_validation.py  # Action schema validation
+|   |-- episode_sandbox.py    # Per-episode isolation for concurrent sessions
+|   |-- tool_router.py        # MCP-style tool routing
+|   `-- visualize_graph.py    # Graph visualization utilities
+|-- training/
+|   |-- collect_sft_data.py   # Scripted perfect-agent SFT data collection
+|   |-- reward_funcs.py       # TRL-compatible GRPO reward functions (10 callables)
+|   |-- train_grpo.py         # Full GRPO training loop
+|   |-- config.py             # Training hyperparameters
+|   |-- freeze_alternate.py   # Alternating freeze schedule for self-play
+|   |-- pfsp_scheduler.py     # Prioritized FSP opponent scheduling
+|   |-- agent_archive.py      # Historical agent checkpoint management
+|   |-- eval_harness.py       # Evaluation harness for trained models
+|   `-- collect_sft.py        # Alternative SFT collection script
+|-- dashboard/
+|   |-- index.html            # Dashboard entry point
+|   |-- css/                  # Stylesheets
+|   |-- js/
+|   |   |-- app.js            # Main dashboard application
+|   |   `-- api.js            # WebSocket API client
+|   `-- assets/               # Static assets
+|-- tests/                    # 88 test cases covering environment hardening
+|-- Dockerfile                # Container deployment
+|-- pyproject.toml            # Project metadata and dependencies
+|-- openenv.yaml              # OpenEnv environment specification
+`-- requirements.txt          # Runtime dependencies
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- CUDA-capable GPU (24GB+ recommended for training, CPU works for inference)
+- pip or uv package manager
+
+### Installation
+
+```bash
+git clone https://github.com/Ajayyy00/CyberSOC-upgraded.git
+cd CyberSOC-upgraded
+pip install -r requirements.txt
+```
+
+### Running the Dashboard
+
+```bash
+python dashboard_server.py --port 8000
+# Open http://localhost:8000/dashboard/
+```
+
+### Running Inference
+
+```bash
+export API_BASE_URL="https://router.huggingface.co/v1"
+export MODEL_NAME="Qwen/Qwen2.5-72B-Instruct"
+export HF_TOKEN="your_token"
+export FSP_MODE="true"
+python inference.py
+```
+
+### Training (requires GPU)
+
+```bash
+pip install -r requirements-training.txt
+# Run the Jupyter notebook: training/CyberSOC_GRPO_Training.ipynb
+# Or use the standalone script:
+python training/train_grpo.py
+```
+
+---
+
+## Why This Matters
+
+This project proves that Asymmetric Fictitious Self-Play is viable on consumer-grade hardware. By optimizing memory with Unsloth and writing custom PyTorch optimization loops, we trained an autonomous SOC AI that learned to stop a live, thinking adversary through the harsh, trial-by-fire reality of Reinforcement Learning.
+
+The agent did not learn from rules. It learned from consequences. It discovered, on its own, that panic leads to failure and precision leads to success -- the same lesson that takes human analysts years of experience to internalize.
