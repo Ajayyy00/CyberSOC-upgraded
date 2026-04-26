@@ -1,3 +1,13 @@
+---
+title: CyberSOC
+emoji: 🛡️
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_file: dashboard_server.py
+pinned: false
+---
+
 # CyberSOC: Asymmetric Dual-Model Reinforcement Learning for Autonomous Incident Response
 
 CyberSOC is an autonomous, AI-driven Security Operations Center built for the Meta OpenEnv Hackathon. It pits two Large Language Models against each other inside a simulated 500-node enterprise network: a lightweight Red Team attacker and a heavyweight Blue Team defender that learns through Reinforcement Learning.
