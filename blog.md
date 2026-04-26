@@ -126,7 +126,13 @@ The model learns these dependencies through repeated interaction, gradually inte
 
 ## Adaptive Red Team: A Multi-Agent Adversary
 
-A deterministic Red Team creates a hard ceiling on Blue's capability. When the attacker follows a fixed script, Blue memorizes the pattern rather than learning to investigate. CyberSOC eliminates this by training **both Blue and Red as full RL agents** in a zero-sum multi-agent loop. Red evolves through four stages, constantly forcing Blue to develop genuine reasoning rather than pattern recognition.
+A  Red Team creates a hard ceiling on Blue's capability. When 
+the attacker follows a fixed script, Blue memorizes the pattern rather than 
+learning to investigate. CyberSOC eliminates this by training **Red as independent Qwen 2.5 3B Instruct agents**, each RL-trained in a 
+zero-sum multi-agent loop — Blue via GRPO to contain breaches, Red via 
+adversarial RL to evade containment. Red evolves through four stages, 
+constantly forcing Blue to develop genuine reasoning rather than pattern 
+recognition.
 
 ![Figure 4: Four-stage Red Team training curriculum — from imitation warm-start through PFSP prioritized sampling, producing a Blue agent that generalizes rather than memorizes.](./images/fig3.png)
 
@@ -179,7 +185,7 @@ Training proceeds in two stages:
 
 **Stage 2 — GRPO Training Loop**: For each scenario, the trainer samples four distinct action sequences from the current model policy. Each sequence is replayed against the CyberSOC environment, and the full 10-dimensional reward breakdown is recorded. GRPO then computes the relative advantage of each completion against the group mean — reinforcing sequences that scored above average and penalizing those below — without requiring a separate critic model.
 
-**Stack**: Qwen 2.5 3B Instruct · 4-bit QLoRA via Unsloth · TRL GRPOTrainer · Deterministic scenario seeding ensures all four GRPO completions face identical network conditions, making the relative advantage comparison meaningful and the training signal stable.
+**Stack**: Qwen 2.5 7B Instruct · 4-bit QLoRA via Unsloth · TRL GRPOTrainer · Deterministic scenario seeding ensures all four GRPO completions face identical network conditions, making the relative advantage comparison meaningful and the training signal stable.
 
 ---
 
@@ -240,4 +246,4 @@ That question is the right foundation for any environment intended to train prof
 ---
 
 *Built for the Meta OpenEnv Hackathon, India 2026.*  
-*Base model: Qwen 2.5 3B Instruct · Fine-tuned with 4-bit QLoRA via Unsloth · Trained with TRL GRPOTrainer on Hugging Face JupyterLab GPU Spaces.*
+*Base model: Qwen 2.5 7B Instruct · Fine-tuned with 4-bit QLoRA via Unsloth · Trained with TRL GRPOTrainer on Hugging Face JupyterLab GPU Spaces.*
